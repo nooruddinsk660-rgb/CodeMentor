@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------
+   GLOBAL
+------------------------------------------ */
+body {
+  font-family: 'Inter', sans-serif;@apply font-display bg-background-light dark:bg-background-dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+/* 3D code cube & parallax helpers */
+
+:root {
+  --cube-size: 220px;
+}
+
+/* cube container perspective */
+.cube-viewport {
+  perspective: 1200px;
+  -webkit-perspective: 1200px;
+}
+
+/* cube */
+.code-cube {
+  width: var(--cube-size);
+  height: var(--cube-size);
+  position: relative;
+  transform-style: preserve-3d;
+  transform-origin: center;
+  animation: cube-rotate 10s linear infinite;
+  will-change: transform;
+}
+
+/* cube faces */
+.cube-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+  backface-visibility: hidden;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 6px 30px rgba(2,6,23,0.55);
+}
+
+/* face transform positions */
+.face-front  { transform: rotateY(   0deg) translateZ(calc(var(--cube-size)/2)); }
+.face-back   { transform: rotateY( 180deg) translateZ(calc(var(--cube-size)/2)); }
+.face-right  { transform: rotateY(  90deg) translateZ(calc(var(--cube-size)/2)); }
+.face-left   { transform: rotateY( -90deg) translateZ(calc(var(--cube-size)/2)); }
+.face-top    { transform: rotateX(  90deg) translateZ(calc(var(--cube-size)/2)); }
+.face-bottom { transform: rotateX( -90deg) translateZ(calc(var(--cube-size)/2)); }
+
+/* cube hover interaction (slow rotation) */
+.cube-viewport:hover .code-cube {
+  animation-play-state: paused;
+  transform: rotateX(-10deg) rotateY(20deg);
+  transition: transform 500ms ease;
+}
+
+/* small code block style inside faces */
+.face-pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.25;
+  color: #dbe7ff;
+  opacity: 0.95;
+  text-align: left;
+  width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* subtle glow + ring animations */
+.hero-glow {
+  filter: blur(120px);
+  opacity: 0.9;
+}
+
+/* cube rotate keyframes */
+@keyframes cube-rotate {
+  0%   { transform: rotateX(10deg) rotateY(0deg) }
+  25%  { transform: rotateX(10deg) rotateY(90deg) }
+  50%  { transform: rotateX(10deg) rotateY(180deg) }
+  75%  { transform: rotateX(10deg) rotateY(270deg) }
+  100% { transform: rotateX(10deg) rotateY(360deg) }
+}
+
+/* tiny floating parallax element */
+.parallax-float {
+  transform: translateZ(0);
+  will-change: transform;
+}
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+
+/* small utility for chart container */
+.chart-placeholder {
+  background: linear-gradient(180deg, rgba(28,107,242,0.06), rgba(16,23,35,0.02));
+  border-radius: 0.75rem;
+}
+
+/* small safe defaults for avatars */
+.avatar { background-size: cover; background-position: center; border-radius: 0.5rem; }
+
+.form-input-custom {
+  transition: all 0.2s ease-in-out;
+}
+.form-input-custom:focus {
+  box-shadow: 0 0 0 2px rgba(28, 107, 242, 0.2);
+}
+

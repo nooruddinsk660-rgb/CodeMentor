@@ -29,12 +29,13 @@ export async function registerUser(payload) {
 
   const data = await res.json();
 
-  if (!res.ok) {
+  if (!res.ok || data.error) {
     throw new Error(data.error || "Registration failed");
   }
 
   return data.data;
 }
+
 
 export async function logoutUser(token) {
   const res = await fetch(`${API_URL}/logout`, {

@@ -26,11 +26,15 @@ export default function SignUpForm() {
           username: email.split("@")[0],
         });
 
+      if (!email.includes("@")) {
+        throw new Error("Please enter a valid email address");
+      }
+      
       await registerUser({
         fullName,
         email,
         password,
-        username: email.split("@")[0], // backend requires username
+        username: email.split("@")[0],
       });
 
       // After successful signup → login page

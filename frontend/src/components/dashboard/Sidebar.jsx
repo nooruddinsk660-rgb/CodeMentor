@@ -6,8 +6,8 @@ import {
   useMotionValue, 
   useMotionTemplate 
 } from "framer-motion";
-import { readCollapsedState, writeCollapsedState } from "../../utils/sidebar"; // Ensure this path is correct
-import { logout } from "../../utils/auth"; // Ensure this path is correct
+import { readCollapsedState, writeCollapsedState } from "../../utils/sidebar"; 
+import { logout } from "../../utils/auth";
 
 const BRAND_AVATAR = "/mnt/data/5aac0a6a-21b0-444e-a313-1ee4ce16044c.png";
 

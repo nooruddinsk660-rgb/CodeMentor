@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../../services/authService";
+import { useAuth } from "../../auth/AuthContext"; // ✅ ADD
 
 export default function LoginForm() {
   const navigate = useNavigate();
+  const { login } = useAuth(); // ✅ ADD
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,11 +20,9 @@ export default function LoginForm() {
     try {
       const result = await loginUser({ email, password });
 
-      // 🔐 Save token
-      localStorage.setItem("token", result.token);
-       console.log("LOGIN SUCCESS, REDIRECTING");
+      // 🔑 SINGLE SOURCE OF TRUTH
+      login(result); // ✅ REPLACE localStorage logic
 
-      // ✅ Redirect
       navigate("/dashboard");
     } catch (err) {
       setError(err.message);

@@ -1,38 +1,19 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Using CDN for reliable SVG logos (e.g., jsdelivr with devicon or svgporn)
-const initialSkills = [
-  { name: "Python", intensity: 80, category: "Backend", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" },
-  { name: "JavaScript", intensity: 70, category: "Frontend", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" },
-  { name: "React", intensity: 90, category: "Frontend", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" },
-  // Using PostgreSQL icon as a good representative for SQL
-  { name: "SQL", intensity: 60, category: "Database", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" },
-  { name: "Node.js", intensity: 50, category: "Backend", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" },
-  { name: "TypeScript", intensity: 80, category: "Frontend", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" },
-  { name: "Docker", intensity: 40, category: "DevOps", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" },
-  // Using standard AWS logo
-  { name: "AWS", intensity: 70, category: "Cloud", logo: "https://cdn.svgporn.com/logos/aws.svg" },
-  { name: "HTML5/CSS3", intensity: 30, category: "Frontend", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" },
-  { name: "Jest", intensity: 50, category: "Testing", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jest/jest-plain.svg" },
-  { name: "GraphQL", intensity: 60, category: "API", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/graphql/graphql-plain.svg" },
-  // Using Jenkins as representative for CI/CD
-  { name: "CI/CD", intensity: 20, category: "DevOps", logo: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jenkins/jenkins-original.svg" }
-];
 
-export default function SkillsGrid() {
-  const [filter, setFilter] = useState("");
+export default function SkillsGrid({ skills = [] }) {
   const [sortBy, setSortBy] = useState("intensity");
   const [selectedSkill, setSelectedSkill] = useState(null);
 
   const filteredSkills = useMemo(() => {
-    return initialSkills
-      .filter((s) => s.name.toLowerCase().includes(filter.toLowerCase()))
-      .sort((a, b) => {
-        if (sortBy === "intensity") return b.intensity - a.intensity;
-        return a.name.localeCompare(b.name);
-      });
-  }, [filter, sortBy]);
+    return [...skills].sort((a, b) => {
+      if (sortBy === "intensity") return b.intensity - a.intensity;
+      return a.name.localeCompare(b.name);
+    });
+  }, [skills, sortBy]);
+
+
 
   // Helper to get color based on intensity for the details panel
   const getIntensityColor = (intensity) => {
@@ -58,17 +39,6 @@ export default function SkillsGrid() {
         </div>
 
         <div className="flex gap-3 p-1 bg-white/5 rounded-xl border border-white/10">
-          {/* Search Input */}
-          <div className="relative flex-1 md:flex-none">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[18px]">search</span>
-            <input 
-              type="text" 
-              placeholder="Search skills..." 
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="w-full md:w-40 bg-transparent border-r border-white/10 pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:text-blue-400 transition-colors"
-            />
-          </div>
 
           {/* Sort Button */}
           <button 
@@ -148,9 +118,10 @@ export default function SkillsGrid() {
 }
 
 // Sub-component for individual Logo Card
-function LogoCard({ skill, onClick, isSelected }) {
+const LogoCard = forwardRef(({ skill, onClick, isSelected }, ref) => {
   return (
     <motion.button
+      ref={ref}
       layout
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -168,24 +139,32 @@ function LogoCard({ skill, onClick, isSelected }) {
     >
       {/* Logo Container */}
       <div className="relative w-12 h-12 flex items-center justify-center">
-        {/* The Logo Image */}
         <img 
-            src={skill.logo} 
-            alt={skill.name} 
-            // Grayscale by default, color on hover or selection
-            className={`w-full h-full object-contain transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'grayscale group-hover:grayscale-0 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] opacity-80 group-hover:opacity-100'}`}
+          src={skill.logo} 
+          alt={skill.name} 
+          className={`w-full h-full object-contain transition-all duration-300 ${
+            isSelected 
+              ? "grayscale-0 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" 
+              : "grayscale group-hover:grayscale-0 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] opacity-80 group-hover:opacity-100"
+          }`}
         />
       </div>
 
-      {/* Name Label */}
-      <span className={`text-xs font-bold tracking-wide transition-colors ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
+      <span className={`text-xs font-bold tracking-wide transition-colors ${
+        isSelected ? "text-white" : "text-gray-400 group-hover:text-white"
+      }`}>
         {skill.name}
       </span>
 
-       {/* Intensity Badge (Top Right Corner) */}
-       <div className={`absolute top-2 right-2 text-[9px] font-black px-1.5 py-0.5 rounded-md transition-colors ${isSelected ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-500 group-hover:bg-white/20 group-hover:text-gray-300'}`}>
-          {skill.intensity}
-       </div>
+      <div className={`absolute top-2 right-2 text-[9px] font-black px-1.5 py-0.5 rounded-md transition-colors ${
+        isSelected 
+          ? "bg-blue-500 text-white" 
+          : "bg-white/10 text-gray-500 group-hover:bg-white/20 group-hover:text-gray-300"
+      }`}>
+        {skill.intensity}
+      </div>
     </motion.button>
   );
-}
+});
+
+LogoCard.displayName = "LogoCard";

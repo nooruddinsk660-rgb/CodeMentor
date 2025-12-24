@@ -18,17 +18,24 @@ class MatchController {
     });
   });
 
+  // ✅ FIX: Get targetUserId from the BODY, not the URL params
   requestMatch = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
-    const { message } = req.body;
+    const { targetUserId, message } = req.body; // <--- CHANGED HERE
+
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, error: "Target User ID is required" });
+    }
 
     const result = await matchService.requestMatch(
       req.user.userId,
-      userId,
+      targetUserId,
       message
     );
 
-    await userService.addUserXP(req.user.userId, 5);
+    // Award XP for taking initiative
+    try {
+        await userService.addUserXP(req.user.userId, 5);
+    } catch (e) { console.error("XP Error", e); }
 
     res.status(200).json({
       success: true,

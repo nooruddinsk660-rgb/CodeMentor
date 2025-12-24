@@ -129,6 +129,7 @@ class SkillGraphService {
 
   /**
    * Find users with complementary skills
+   * FIX: Added toInteger() to LIMIT clause
    */
   async findComplementaryUsers(userId, limit = 10) {
     try {
@@ -150,7 +151,7 @@ class SkillGraphService {
                size(complementarySkills) as complementaryCount,
                size(commonSkills) as commonCount
         ORDER BY complementaryCount DESC, commonCount DESC
-        LIMIT $limit
+        LIMIT toInteger($limit)
       `;
 
       const params = {
@@ -168,6 +169,7 @@ class SkillGraphService {
 
   /**
    * Find users with similar skills (for mentorship matching)
+   * FIX: Added toInteger() to LIMIT clause
    */
   async findSimilarUsers(userId, limit = 10) {
     try {
@@ -176,7 +178,7 @@ class SkillGraphService {
         WHERE u1 <> u2
         WITH u2, count(DISTINCT s) as commonSkills
         ORDER BY commonSkills DESC
-        LIMIT $limit
+        LIMIT toInteger($limit)
         MATCH (u2)-[r:HAS_SKILL]->(skill:Skill)
         RETURN u2.userId as userId,
                u2.username as username,
@@ -200,6 +202,7 @@ class SkillGraphService {
 
   /**
    * Get skill recommendations based on user's current skills
+   * FIX: Added toInteger() to LIMIT clause
    */
   async getSkillRecommendations(userId, limit = 5) {
     try {
@@ -211,7 +214,7 @@ class SkillGraphService {
         WITH s2, count(DISTINCT u2) as frequency
         RETURN s2.name as skill, frequency
         ORDER BY frequency DESC
-        LIMIT $limit
+        LIMIT toInteger($limit)
       `;
 
       const params = {

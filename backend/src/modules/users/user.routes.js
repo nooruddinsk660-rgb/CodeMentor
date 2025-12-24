@@ -15,6 +15,8 @@ router.put('/me', userController.updateUser);
 
 // Update user skills
 router.put('/me/skills', userController.updateSkills);
+// Get user Skills
+router.get('/me/skills', userController.getMySkills);
 
 // Get user skill graph
 router.get('/me/graph', userController.getUserSkillGraph);

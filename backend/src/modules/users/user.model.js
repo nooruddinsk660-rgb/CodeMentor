@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+/* FIND THIS SECTION IN YOUR CODE */
 const skillSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -11,6 +12,23 @@ const skillSchema = new mongoose.Schema({
     enum: ['beginner', 'intermediate', 'advanced', 'expert'],
     default: 'intermediate'
   },
+  
+  /* --- ADD THESE NEW FIELDS --- */
+  logo: {
+    type: String,
+    // THE MAGIC: Auto-generate logo URL if missing
+    default: function() {
+      if (!this.name) return '';
+      // cleans name (e.g. "React.js" -> "react") and builds URL
+      return `https://cdn.simpleicons.org/${this.name.replace(/\s|\.|js|script/gi, '').toLowerCase()}`;
+    }
+  },
+  themeColor: {
+    type: String,
+    default: 'from-blue-400 to-cyan-300' // Default "Holographic" Blue
+  },
+  /* --------------------------- */
+
   category: {
     type: String,
     default: 'general'
@@ -24,7 +42,24 @@ const skillSchema = new mongoose.Schema({
     type: Number,
     default: 0
   }
-}, { _id: false });
+}, { 
+  _id: true, 
+  /* IMPORTANT: Enable virtuals so 'intensity' is sent to frontend */
+  toJSON: { virtuals: true }, 
+  toObject: { virtuals: true } 
+});
+
+/* --- ADD THIS VIRTUAL PROPERTY --- */
+// Automatically converts text proficiency to numbers for the progress bar
+skillSchema.virtual('intensity').get(function() {
+  const scores = {
+    beginner: 30,
+    intermediate: 60,
+    advanced: 85,
+    expert: 100
+  };
+  return scores[this.proficiency] || 50;
+});
 
 const githubDataSchema = new mongoose.Schema({
   username: String,
@@ -157,10 +192,19 @@ const userSchema = new mongoose.Schema({
       default: 0
     }
   },
+
+   activityLog: [
+    {
+      date: {
+        type: Date,
+        default: Date.now,
+      }
+    }
+  ],
   
-  isActive: {
-    type: Boolean,
-    default: true
+  isActive: { 
+    type: Boolean, 
+    default: true 
   },
   
   isVerified: {

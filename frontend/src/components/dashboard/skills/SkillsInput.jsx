@@ -1,134 +1,233 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-/**
- * SkillsInput
- * - local state for the input
- * - reads/writes the shared skills list from localStorage
- * - prevents duplicates
- * - fires 'custom' event to let SkillsList know about updates
- *
- * Implementation detail:
- * This file uses a simple pub/sub pattern via the DOM CustomEvent to avoid
- * introducing a global state library. If you prefer, swap to context or Redux.
- */
+export default function SkillsInput({ onAddSkill, isSaving, availableSkills = [] }) {
+  const [query, setQuery] = useState("");
+  const [proficiency, setProficiency] = useState("intermediate");
+  const [isFocused, setIsFocused] = useState(false);
+  
+  // Autocomplete States
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [selectedSkillData, setSelectedSkillData] = useState(null);
 
-const STORAGE_KEY = "codementor:user_skills_v1";
+  const wrapperRef = useRef(null);
+  const proficiencyLevels = ["beginner", "intermediate", "advanced", "expert"];
 
-function readStoredSkills() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function writeStoredSkills(skills) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(skills));
-  } catch (e) {
-    // ignore storage errors
-  }
-}
-
-export default function SkillsInput() {
-  const [value, setValue] = useState("");
-  const [skills, setSkills] = useState(() => readStoredSkills());
-  const [error, setError] = useState("");
-
+  // 1. Handle Click Outside
   useEffect(() => {
-    // initialize
-    writeStoredSkills(skills);
-    // notify other components
-    window.dispatchEvent(new CustomEvent("skills:update", { detail: { skills } }));
-  }, [skills]);
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const normalize = (s) => s.trim();
-
-  function addSkill(raw) {
-    const candidate = normalize(raw);
-    if (!candidate) {
-      setError("");
+  // 2. Filter Suggestions
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
       return;
     }
+    if (selectedSkillData && query === selectedSkillData.name) return;
 
-    // case-insensitive duplicate prevention
-    const exists = skills.some((x) => x.toLowerCase() === candidate.toLowerCase());
-    if (exists) {
-      setError(`${candidate} is already added.`);
-      // clear after short delay
-      setTimeout(() => setError(""), 2000);
-      return;
-    }
+    const filtered = availableSkills.filter(skill => 
+      skill.name.toLowerCase().includes(query.toLowerCase())
+    );
+    setSuggestions(filtered);
+    setShowSuggestions(filtered.length > 0);
+    setHighlightedIndex(-1);
+  }, [query, availableSkills, selectedSkillData]);
 
-    const next = [...skills, candidate];
-    setSkills(next);
-    setValue("");
-    setError("");
-    writeStoredSkills(next);
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === "Enter") {
+  // 3. Handle Keyboard Navigation
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      addSkill(value);
-    }
-    // optionally allow comma to add multiple
-    if (e.key === "," && value.trim()) {
+      setHighlightedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      addSkill(value.replace(",", ""));
+      setHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === "Enter") {
+      if (showSuggestions && highlightedIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(suggestions[highlightedIndex]);
+      } 
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
     }
-  }
+  };
 
-  function handleClickAdd() {
-    addSkill(value);
-  }
+  // 4. Select Suggestion Logic
+  const selectSuggestion = (skill) => {
+    setQuery(skill.name);
+    setSelectedSkillData(skill);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+  };
+
+  // 5. Submit Logic
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!query.trim()) return;
+
+    let finalSkill = selectedSkillData;
+
+    if (!finalSkill) {
+      const match = availableSkills.find(s => s.name.toLowerCase() === query.trim().toLowerCase());
+      if (match) {
+        finalSkill = match;
+      } else {
+        finalSkill = {
+          name: query.trim(),
+          category: "General",
+          logo: `https://cdn.simpleicons.org/${query.trim().replace(/\s|\./g, '').toLowerCase()}`,
+          intensity: 50
+        };
+      }
+    }
+
+    const payload = {
+      ...finalSkill,
+      proficiencyLabel: proficiency,
+      intensity: finalSkill.intensity || 50 
+    };
+
+    if (typeof onAddSkill === 'function') {
+        onAddSkill(payload);
+    }
+
+    setQuery("");
+    setProficiency("intermediate");
+    setSelectedSkillData(null);
+    setSuggestions([]);
+  };
 
   return (
-    <div className="bg-white dark:bg-[#1b2027] rounded-xl shadow-sm border border-gray-200 dark:border-[#3b4454] p-6">
-      <label className="flex flex-col w-full">
-        <p className="text-black dark:text-white text-base font-medium leading-normal pb-2">Add a skill</p>
+    <motion.div 
+      layout
+      ref={wrapperRef}
+      className={`relative rounded-3xl transition-all duration-500 z-50 w-full
+        ${isFocused 
+            ? "p-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 shadow-[0_0_40px_rgba(59,130,246,0.4),0_0_15px_rgba(168,85,247,0.4)] scale-[1.01]" 
+            : "p-[1px] bg-white/10 shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:shadow-[0_0_25px_rgba(59,130,246,0.25)] hover:border-blue-500/30 border border-transparent"
+        }
+      `}
+    >
+      <form 
+        onSubmit={handleSubmit}
+        // ✅ CHANGED: Always 'flex-col' (Vertical Stack)
+        className="relative bg-[#0f1629]/80 backdrop-blur-xl rounded-[22px] p-5 lg:p-6 flex flex-col gap-4"
+      >
+        
+        {/* === ROW 1: INPUT BAR === */}
+        <div className="flex items-center gap-4 relative w-full">
+             {/* Logo Preview */}
+             <div className={`w-12 h-12 rounded-xl bg-black/30 flex-shrink-0 flex items-center justify-center border transition-all duration-500
+                ${selectedSkillData 
+                    ? "border-blue-400/60 shadow-[0_0_20px_rgba(59,130,246,0.4)]" 
+                    : "border-white/10"
+                }
+             `}>
+                {selectedSkillData ? (
+                    <img src={selectedSkillData.logo} alt="logo" className="w-7 h-7 object-contain drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
+                ) : (
+                    <span className="material-symbols-outlined text-gray-600 text-xl">code</span>
+                )}
+             </div>
 
-        <div className="flex w-full items-stretch rounded-lg group">
-          <input
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a skill and press Enter"
-            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-l-lg text-black dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-background-dark border border-gray-300 dark:border-[#3b4454] bg-background-light dark:bg-background-dark h-12 placeholder:text-gray-400 dark:placeholder:text-[#9ca7ba] px-4 text-base"
-            aria-label="Add skill"
-          />
+             {/* Text Input - TAKES REMAINING SPACE */}
+             <div className="relative flex-1">
+               <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setSelectedSkillData(null);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => {
+                    setIsFocused(false);
+                    setTimeout(() => setShowSuggestions(false), 200); 
+                  }}
+                  placeholder="Type search (e.g. React)..."
+                  className="bg-transparent border-none text-white text-xl md:text-2xl font-black placeholder:text-gray-600 placeholder:font-bold focus:ring-0 w-full p-0 tracking-wide"
+                  autoComplete="off"
+               />
+               
+                {/* --- AUTOCOMPLETE DROPDOWN --- */}
+                <AnimatePresence>
+                  {showSuggestions && suggestions.length > 0 && (
+                    <motion.ul
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      className="absolute top-full left-0 right-0 mt-4 bg-[#0a0f1d]/95 backdrop-blur-md border border-blue-500/20 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] max-h-60 overflow-y-auto z-[100] custom-scrollbar py-2"
+                    >
+                      {suggestions.map((skill, index) => (
+                        <li 
+                          key={skill._id || index}
+                          onMouseDown={() => selectSuggestion(skill)}
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all
+                            ${index === highlightedIndex ? "bg-blue-600/20 border-l-2 border-blue-500 pl-3" : "hover:bg-white/5 border-l-2 border-transparent"}
+                          `}
+                        >
+                          <img src={skill.logo} alt="" className="w-5 h-5 object-contain opacity-80" />
+                          <div className="flex flex-col">
+                              <span className="text-white text-sm font-bold tracking-wide">{skill.name}</span>
+                              <span className="text-[9px] text-blue-300/70 uppercase font-semibold">{skill.category}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </motion.ul>
+                  )}
+                </AnimatePresence>
+             </div>
 
-          <button
-            onClick={handleClickAdd}
-            aria-label="Add skill"
-            className="text-white bg-primary flex border border-primary items-center justify-center px-4 rounded-r-lg"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-2xl">add</span>
-          </button>
+             {/* Submit Button - FIXED RIGHT */}
+             <button
+                type="submit" 
+                disabled={!query || isSaving}
+                className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex-shrink-0 flex items-center justify-center hover:from-blue-500 hover:to-blue-600 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:scale-100 disabled:shadow-none shadow-lg shadow-blue-900/30 border border-blue-400/20"
+            >
+                {isSaving ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                    <span className="material-symbols-outlined text-xl">add</span>
+                )}
+            </button>
         </div>
-      </label>
 
-      {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
+        {/* === ROW 2: PROFICIENCY (UNDER THE INPUT) === */}
+        <div className="w-full pt-2 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap pt-1 sm:pt-0">
+                Proficiency:
+            </span>
+            <div className="flex flex-wrap gap-2 w-full">
+                {proficiencyLevels.map((level) => (
+                    <button
+                        key={level}
+                        type="button" 
+                        onClick={() => setProficiency(level)}
+                        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[10px] uppercase font-black transition-all duration-300 relative overflow-hidden border border-white/5 
+                            ${proficiency === level 
+                                ? "text-white bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.3)] border-transparent" 
+                                : "text-gray-500 hover:text-gray-300 bg-white/5 hover:bg-white/10"
+                            }`}
+                    >
+                        <span className="relative z-10">{level}</span>
+                        {proficiency === level && (
+                            <motion.div layoutId="activePill" className="absolute inset-0 bg-blue-600 -z-0" />
+                        )}
+                    </button>
+                ))}
+            </div>
+        </div>
 
-      <div className="flex justify-end pt-4">
-        <button
-          onClick={() => {
-            // Save explicitly (already saved on change, but keep for parity with original UI)
-            writeStoredSkills(skills);
-            // Small visual confirmation — temporarily change text? here we'll dispatch event
-            window.dispatchEvent(new CustomEvent("skills:saved", { detail: { skills } }));
-            const el = document.createElement("div");
-            el.textContent = "Saved";
-            // no-op UX feedback; real app would show a toast
-          }}
-          className="flex w-full sm:w-auto min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center rounded-lg h-12 px-8 bg-primary text-white text-base font-bold tracking-[0.015em] hover:bg-blue-600 transition-colors"
-        >
-          <span className="truncate">Save Changes</span>
-        </button>
-      </div>
-    </div>
+      </form>
+    </motion.div>
   );
 }

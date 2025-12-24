@@ -3,6 +3,36 @@ const logger = require('../../core/config/loggerConfig');
 const { NotFoundError, ValidationError } = require('../../common/middleware/errorHandler');
 const skillGraphService = require('../../common/utils/skillGraph');
 
+function calculateActiveStreak(activityLog = []) {
+  if (!activityLog.length) return 0;
+
+  const normalize = (d) => {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  };
+
+  const today = normalize(new Date());
+
+  const uniqueDays = [
+    ...new Set(activityLog.map(a => normalize(a.date)))
+  ].sort((a, b) => b - a);
+
+  let streak = 0;
+  let currentDay = today;
+
+  for (const day of uniqueDays) {
+    if (day === currentDay) {
+      streak++;
+      currentDay -= 86400000;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
 class UserService {
   async createUser(userData) {
     try {
@@ -95,6 +125,9 @@ class UserService {
         });
       }
 
+      await this.recordActivity(userId); 
+
+
       logger.info(`User updated: ${user.username}`);
       return user;
     } catch (error) {
@@ -112,6 +145,7 @@ class UserService {
 
       user.skills = skills;
       await user.save();
+      await this.recordActivity(userId);
 
       // Update skills in Neo4j
       await skillGraphService.updateUserSkills(userId, skills);
@@ -122,6 +156,13 @@ class UserService {
       logger.error('Error updating user skills:', error);
       throw error;
     }
+  }
+  async recordActivity(userId) {
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        activityLog: { date: new Date() }
+      }
+    });
   }
 
   async updateUserEmbedding(userId, embedding) {
@@ -152,6 +193,7 @@ class UserService {
 
       user.addXP(xpAmount);
       await user.save();
+      await this.recordActivity(userId);
 
       logger.info(`Added ${xpAmount} XP to user: ${user.username}`);
       return user;
@@ -333,11 +375,14 @@ class UserService {
       if (!user) {
         throw new NotFoundError('User');
       }
+      
+      const activeStreak = calculateActiveStreak(user.activityLog);
 
       return {
         xp: user.xp,
         level: user.level,
         skillCount: user.skillCount,
+        activeStreak,
         statistics: user.statistics,
         matchHistory: user.matchHistory
       };

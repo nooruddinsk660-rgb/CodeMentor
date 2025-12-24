@@ -16,6 +16,7 @@ const userRoutes = require('./modules/users/user.routes');
 const githubRoutes = require('./modules/github/github.routes');
 const matchRoutes = require('./modules/matchmaking/match.routes');
 const aiRoutes = require('./modules/ai/ai.routes');
+const skillsRoutes = require("./modules/skills/skills.routes");
 
 const typeDefs = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
@@ -25,6 +26,7 @@ const passport = require('./modules/auth/passport-setup');
 
 async function createServer() {
   const app = express();
+
 
   // Trust proxy for production (required for rate limiting behind reverse proxy)
   if (config.isProduction()) {
@@ -293,6 +295,7 @@ async function createServer() {
   app.use('/github', generalLimiter, githubRoutes);
   app.use('/match', generalLimiter, matchRoutes);
   app.use('/ai', generalLimiter, aiRoutes);
+  app.use("/skills", skillsRoutes);
 
   // Apply analysis-specific rate limiting to specific endpoint
   app.post('/github/analyze/:username', analysisLimiter);

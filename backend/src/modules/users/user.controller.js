@@ -2,7 +2,10 @@ const userService = require('./user.service');
 const skillGraphService = require('../../common/utils/skillGraph');
 const { asyncHandler } = require('../../common/middleware/errorHandler');
 const Joi = require('joi');
+const aiService = require('../ai/ai.service');
 const logger = require('../../core/config/loggerConfig');
+// ✅ FIX 1: Import the User Model
+const User = require('./user.model'); 
 
 const updateUserSchema = Joi.object({
   fullName: Joi.string().min(2).max(100),
@@ -28,6 +31,8 @@ const updateSkillsSchema = Joi.object({
       name: Joi.string().required(),
       proficiency: Joi.string().valid('beginner', 'intermediate', 'advanced', 'expert'),
       category: Joi.string(),
+      logo: Joi.string().uri().allow(null, ''), 
+      themeColor: Joi.string().allow(null, ''),
       source: Joi.string().valid('github', 'manual', 'inferred'),
       yearsOfExperience: Joi.number().min(0)
     })
@@ -41,6 +46,25 @@ class UserController {
     res.status(200).json({
       success: true,
       data: user
+    });
+  });
+
+  // ✅ FIX 2: Added missing updateUser method
+  updateUser = asyncHandler(async (req, res) => {
+    // Validate input
+    const { error, value } = updateUserSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.details[0].message
+      });
+    }
+
+    const updatedUser = await userService.updateUser(req.user.userId, value);
+
+    res.status(200).json({
+      success: true,
+      data: updatedUser
     });
   });
 
@@ -71,44 +95,45 @@ class UserController {
     });
   });
 
-  updateUser = asyncHandler(async (req, res) => {
-    const { error, value } = updateUserSchema.validate(req.body);
-    
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.details[0].message
-      });
-    }
+  updateSkills = async (req, res) => {
+    try {
+      const { skills } = req.body;
+      const userId = req.user.userId;
+      const skillNames = skills.map(s => s.name);
 
-    const user = await userService.updateUser(req.user.userId, value);
+      // 1. Generate AI Embedding (Tech DNA)
+      let embedding = [];
+      try {
+          embedding = await aiService.generateEmbedding(skillNames);
+      } catch (e) { console.error("AI Error:", e.message); }
+
+      // 2. Sync with Neo4j (Graph Database)
+      try {
+          await skillGraphService.updateUserSkills(userId, skills);
+      } catch (e) { console.error("Neo4j Error:", e.message); }
+
+      // 3. Save to MongoDB
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: { skills: skills, skillEmbedding: embedding } },
+        { new: true, runValidators: true }
+      );
+
+      res.status(200).json({ success: true, data: { skills: updatedUser.skills } });
+
+    } catch (error) {
+      console.error("Update Skills Error:", error);
+      res.status(500).json({ success: false, error: "Server Error" });
+    }
+  };
+
+  getMySkills = asyncHandler(async (req, res) => {
+    const user = await userService.getUserById(req.user.userId);
     
     res.status(200).json({
       success: true,
-      message: 'User updated successfully',
-      data: user
-    });
-  });
-
-  updateSkills = asyncHandler(async (req, res) => {
-    const { error, value } = updateSkillsSchema.validate(req.body);
-    
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.details[0].message
-      });
-    }
-
-    const user = await userService.updateUserSkills(req.user.userId, value.skills);
-    
-    // Award XP for updating skills
-    await userService.addUserXP(req.user.userId, 10);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Skills updated successfully',
-      data: user
+      count: user.skills ? user.skills.length : 0,
+      data: user.skills || []
     });
   });
 
@@ -207,6 +232,7 @@ class UserController {
       status,
       feedback
     );
+    await userService.recordActivity(req.user.userId);
     
     res.status(200).json({
       success: true,

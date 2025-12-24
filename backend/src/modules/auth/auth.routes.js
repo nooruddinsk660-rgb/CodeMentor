@@ -25,5 +25,7 @@ router.get('/github/callback',
 // Protected routes
 router.post('/change-password', authMiddleware, authController.changePassword);
 router.post('/logout', authMiddleware, authController.logout);
+router.get('/me', authMiddleware, authController.me);
+
 
 module.exports = router;

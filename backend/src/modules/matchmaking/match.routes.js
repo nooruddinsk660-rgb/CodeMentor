@@ -9,6 +9,6 @@ router.use(authMiddleware);
 router.get('/recommendations', matchController.getRecommendations);
 router.get('/complementary', matchController.getComplementaryUsers);
 router.get('/similar', matchController.getSimilarUsers);
-router.post('/request/:userId', matchController.requestMatch);
+router.post('/request', matchController.requestMatch);
 
 module.exports = router;

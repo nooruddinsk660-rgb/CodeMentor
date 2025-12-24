@@ -1,19 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import MentorCard from "./MentorCard";
-
-const mentors = [
-  { avatar: "https://i.pravatar.cc/100?img=32", name: "Jane Doe", role: "Python Expert" },
-  { avatar: "https://i.pravatar.cc/100?img=33", name: "John Smith", role: "React Specialist" },
-  { avatar: "https://i.pravatar.cc/100?img=34", name: "Emily White", role: "Data Science Pro" }
-];
+import { getRecommendedMatches } from "../../services/match.service";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function RecentMatches() {
+  const { token, loading: authLoading } = useAuth();
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    async function fetchMatches() {
+      try {
+        const data = await getRecommendedMatches(token);
+        setMatches(data);
+      } catch (err) {
+        console.error("Recent matches error:", err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMatches();
+  }, [token, authLoading]);
+
+  if (authLoading || loading) {
+    return <p className="text-gray-400">Loading matches…</p>;
+  }
+
   return (
     <div>
-      <h3 className="text-white text-[22px] font-bold mb-4">Recent Matches</h3>
+      <h3 className="text-white text-[22px] font-bold mb-4">
+        Recommended Matches
+      </h3>
+
       <div className="space-y-4">
-        {mentors.map((m) => (
-          <MentorCard key={m.name} {...m} />
+        {matches.map((user) => (
+          <MentorCard
+            key={user._id}
+            avatar={user.avatar}
+            name={user.fullName}
+            role={user.primarySkill || "Mentor"}
+          />
         ))}
       </div>
     </div>

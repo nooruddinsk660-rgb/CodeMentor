@@ -1,3 +1,4 @@
+// backend/src/modules/auth/passport-setup.js
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
 const config = require('../../core/config/env');
@@ -23,80 +24,70 @@ passport.use(
       clientID: config.github.clientID,
       clientSecret: config.github.clientSecret,
       callbackURL: config.github.callbackURL,
-      scope: ['user:email', 'read:user', 'repo']
+      scope: ['user:email', 'read:user', 'public_repo'], // Changed 'repo' to 'public_repo' for least privilege unless you explicitly need private access
+      passReqToCallback: true // Important for linking accounts later if needed
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
         logger.info(`GitHub OAuth callback for user: ${profile.username}`);
 
-        // Extract email from profile
-        const email = profile.emails && profile.emails.length > 0 
-          ? profile.emails[0].value 
-          : `${profile.username}@github.user`;
+        // Robust email extraction (GitHub profile.emails can be empty if private)
+        let email = profile.emails && profile.emails[0]?.value;
+        
+        if (!email) {
+           // Fallback: This user might not have a public email. 
+           // In production, you might want to fetch it using the accessToken from the /user/emails endpoint.
+           // For now, we generate a placeholder to prevent schema validation errors.
+           email = `${profile.username}@github.codementor.io`;
+        }
 
-        // Check if user exists
+        // 1. Check if user exists by GitHub ID
         let user = await User.findOne({ githubId: profile.id });
 
         if (user) {
-          // Update existing user
+          // Update tokens and profile data
           user.githubAccessToken = accessToken;
-          user.avatar = profile.photos && profile.photos.length > 0 
-            ? profile.photos[0].value 
-            : user.avatar;
+          user.avatar = profile.photos?.[0]?.value || user.avatar;
           user.lastLogin = new Date();
-          
           await user.save();
-          logger.info(`Existing user logged in: ${user.username}`);
-        } else {
-          // Check if email already exists (user might have signed up differently)
-          user = await User.findOne({ email });
-
-          if (user) {
-            // Link GitHub account to existing user
-            user.githubId = profile.id;
-            user.githubAccessToken = accessToken;
-            user.avatar = profile.photos && profile.photos.length > 0 
-              ? profile.photos[0].value 
-              : user.avatar;
-            user.lastLogin = new Date();
-            
-            await user.save();
-            logger.info(`GitHub account linked to existing user: ${user.username}`);
-          } else {
-            // Create new user
-            user = new User({
-              githubId: profile.id,
-              username: profile.username.toLowerCase(),
-              email,
-              fullName: profile.displayName || profile.username,
-              bio: profile._json.bio || '',
-              avatar: profile.photos && profile.photos.length > 0 
-                ? profile.photos[0].value 
-                : null,
-              githubAccessToken: accessToken,
-              githubData: {
-                username: profile.username,
-                profileUrl: profile.profileUrl,
-                avatarUrl: profile.photos && profile.photos.length > 0 
-                  ? profile.photos[0].value 
-                  : null,
-                bio: profile._json.bio,
-                company: profile._json.company,
-                location: profile._json.location,
-                publicRepos: profile._json.public_repos,
-                followers: profile._json.followers,
-                following: profile._json.following
-              },
-              isVerified: true,
-              lastLogin: new Date()
-            });
-
-            await user.save();
-            logger.info(`New user created via GitHub: ${user.username}`);
-          }
+          return done(null, user);
         }
 
-        return done(null, user);
+        // 2. Check if user exists by Email (Account Linking)
+        user = await User.findOne({ email });
+
+        if (user) {
+          // Link GitHub to existing account
+          user.githubId = profile.id;
+          user.githubAccessToken = accessToken;
+          if (!user.avatar) user.avatar = profile.photos?.[0]?.value;
+          await user.save();
+          return done(null, user);
+        }
+
+        // 3. Create New User
+        const newUser = new User({
+          githubId: profile.id,
+          username: profile.username.toLowerCase(),
+          email: email.toLowerCase(),
+          fullName: profile.displayName || profile.username,
+          bio: profile._json.bio || '',
+          avatar: profile.photos?.[0]?.value,
+          githubAccessToken: accessToken,
+          isVerified: true, // GitHub users are implicitly verified
+          githubData: {
+            username: profile.username,
+            profileUrl: profile.profileUrl,
+            publicRepos: profile._json.public_repos,
+            followers: profile._json.followers,
+            following: profile._json.following
+          }
+        });
+
+        await newUser.save();
+        logger.info(`New user created via GitHub: ${newUser.username}`);
+        return done(null, newUser);
+
       } catch (error) {
         logger.error('Error in GitHub OAuth strategy:', error);
         return done(error, null);

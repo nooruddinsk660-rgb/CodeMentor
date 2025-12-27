@@ -60,17 +60,18 @@ class AuthController {
   });
 
   githubCallback = asyncHandler(async (req, res) => {
-    if (!req.user) {
-      return res.redirect(`${config.cors.origin}/login?error=github_auth_failed`);
-    }
+  if (!req.user) {
+    return res.redirect(`${config.cors.origin}/login?error=github_auth_failed`);
+  }
 
-    const result = await authService.loginWithGithub(req.user);
+  const result = await authService.loginWithGithub(req.user);
 
-    // Redirect to frontend with token
-    res.redirect(
-      `${config.cors.origin}/auth/callback?token=${result.token}`
-    );
-  });
+  // Redirect to frontend with token
+  // MAKE SURE config.cors.origin points to your Vite frontend (e.g., http://localhost:5173)
+  res.redirect(
+    `${config.cors.origin}/auth/callback?token=${result.token}`
+  );
+});
 
   refreshToken = asyncHandler(async (req, res) => {
     const { token } = req.body;

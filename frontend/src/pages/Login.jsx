@@ -15,11 +15,13 @@ export default function Login() {
           subtitle="Welcome back, developer."
         />
 
-        {/* ✅ THIS CONNECTS FRONTEND TO LOGIN LOGIC */}
         <LoginForm />
 
         <AuthDivider />
+        
+        {/* 4. Connect the Button */}
         <SocialAuthButton text="Sign in with GitHub" />
+        
         <AuthFooter text="Don't have an account?" linkText="Sign up" linkTo="/signup" />
       </AuthCard>
     </AuthLayout>

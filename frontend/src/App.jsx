@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import AuthCallback from "./pages/auth/AuthCallback";
 
 import DashboardPage from "./pages/DashBoardPage";
 import SkillsPage from "./pages/dashboard/Skills";
@@ -24,6 +25,7 @@ export default function App() {
       {/* Auth */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* Protected */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

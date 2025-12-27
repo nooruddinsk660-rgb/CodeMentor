@@ -293,7 +293,7 @@ async function createServer() {
   // Apply general rate limiting to other routes
   app.use('/users', generalLimiter, userRoutes);
   app.use('/github', generalLimiter, githubRoutes);
-  app.use('/match', generalLimiter, matchRoutes);
+  app.use('/matches', generalLimiter, matchRoutes);
   app.use('/ai', generalLimiter, aiRoutes);
   app.use("/skills", skillsRoutes);
 

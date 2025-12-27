@@ -7,18 +7,69 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore session
+  // ✅ Restore session and validate token
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
+    const initAuth = async () => {
+      const storedUser = localStorage.getItem("user");
+      const storedToken = localStorage.getItem("token");
 
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
-    }
+      if (storedUser && storedToken) {
+        try {
+          // ✅ CRITICAL: Verify token is still valid on mount
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${storedToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
 
-    setLoading(false);
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.data);
+            setToken(storedToken);
+          } else {
+            // Token expired or invalid - clear storage
+            localStorage.removeItem("user");
+            localStorage.removeItem("token");
+          }
+        } catch (error) {
+          console.error("Auth verification failed:", error);
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+        }
+      }
+
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
+
+  // ✅ Intercept API calls to handle token expiration
+  useEffect(() => {
+    if (!token) return;
+
+    const interceptor = async (url, options = {}) => {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // ✅ Auto-logout on 401 (token expired)
+      if (response.status === 401) {
+        logout();
+        window.location.href = '/login?session=expired';
+      }
+
+      return response;
+    };
+
+    // Attach to window for global use (optional)
+    window.authFetch = interceptor;
+  }, [token]);
 
   const login = ({ user, token }) => {
     setUser(user);
@@ -28,12 +79,27 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", token);
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+  const logout = async () => {
+    try {
+      // ✅ Call backend logout endpoint
+      if (token) {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // Always clear local state
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+    }
   };
 
   return (

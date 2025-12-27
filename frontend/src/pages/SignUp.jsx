@@ -7,19 +7,13 @@ import AuthFooter from "../components/authentication/AuthFooter";
 import SignUpForm from "../components/authentication/SignUpForm";
 
 export default function SignUp() {
-  return (
+ return (
     <AuthLayout>
       <AuthCard>
-        <AuthTitle
-          title="Create your account"
-          subtitle="Join the AI Mentorship Revolution."
-        />
-
-        {/* ✅ CONNECTED FORM */}
+        <AuthTitle title="Create your account" subtitle="Join the AI Mentorship Revolution." />
         <SignUpForm />
-
         <AuthDivider />
-        <SocialAuthButton text="Sign up with GitHub" />
+        <SocialAuthButton text="Sign in with GitHub" />
         <AuthFooter text="Already have an account?" linkText="Login" linkTo="/login"/>
       </AuthCard>
     </AuthLayout>

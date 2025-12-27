@@ -25,11 +25,13 @@ export default function ProgressSection() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const userId = user?.id || user?._id || user?.userId;
+
   useEffect(() => {
     if (authLoading || !user) return;
     async function fetchStats() {
       try {
-        const data = await getUserStatistics(token, user._id);
+        const data = await getUserStatistics(token, user?._id);
         setStats(data);
       } catch (err) {
         console.error("Statistics error:", err.message);

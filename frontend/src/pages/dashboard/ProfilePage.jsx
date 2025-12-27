@@ -66,10 +66,31 @@ export default function ProfilePage() {
     setTimeout(() => setShowShareToast(false), 3000);
   };
 
-  const handleGithubSync = () => {
+  const handleGithubSync = async () => {
     setIsSyncing(true);
-    // Simulate API call
-    setTimeout(() => setIsSyncing(false), 2000);
+    try {
+      // If the user has a GitHub username in their data, use it
+      const username = profile.githubData?.username || profile.username;
+      
+      // Call the analysis endpoint
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/github/analyze/${username}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // Refresh profile data to show new stats/skills
+        fetchProfile(); 
+        // You might want to import 'toast' and show success message
+        // toast.success("GitHub data synced successfully!");
+      }
+    } catch (error) {
+      console.error("Sync failed", error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   if (loading) return <LoadingScreen />;

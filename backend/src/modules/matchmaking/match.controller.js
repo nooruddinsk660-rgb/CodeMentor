@@ -20,29 +20,74 @@ class MatchController {
 
   // ✅ FIX: Get targetUserId from the BODY, not the URL params
   requestMatch = asyncHandler(async (req, res) => {
-    const { targetUserId, message } = req.body; // <--- CHANGED HERE
+    const { targetUserId, message } = req.body;
+    const userId = req.user.userId;
 
     if (!targetUserId) {
-      return res.status(400).json({ success: false, error: "Target User ID is required" });
+        return res.status(400).json({ success: false, error: "Target User ID is required" });
     }
 
+    // 1. DAILY LIMIT CHECK (Scarcity creates value)
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    // Check how many matches user requested today (using matchHistory)
+    const user = await userService.getUserById(userId);
+    const dailyRequests = user.matchHistory.filter(m => 
+        new Date(m.matchedAt) >= today && m.status === 'pending'
+    ).length;
+
+    const DAILY_LIMIT = 5;
+    if (dailyRequests >= DAILY_LIMIT) {
+        return res.status(429).json({ 
+            success: false, 
+            error: "You've reached your connection limit for today. Come back tomorrow!",
+            isLimitReached: true
+        });
+    }
+
+    // 2. EXECUTE MATCH REQUEST
     const result = await matchService.requestMatch(
-      req.user.userId,
-      targetUserId,
-      message
+        userId,
+        targetUserId,
+        message
     );
 
-    // Award XP for taking initiative
+    // 3. GAMIFICATION ENGINE (Variable Rewards)
+    let xpAwarded = 15; // Base XP increased from 5
+    let streakBonus = false;
+
     try {
-        await userService.addUserXP(req.user.userId, 5);
-    } catch (e) { console.error("XP Error", e); }
+        // Bonus for first connection of the day
+        if (dailyRequests === 0) {
+            xpAwarded += 50; // "First Move" Bonus
+            streakBonus = true;
+        }
+        
+        await userService.addUserXP(userId, xpAwarded);
+        
+        // **CRITICAL**: Keep the daily streak alive
+        await userService.recordActivity(userId); 
+        
+    } catch (e) { console.error("Gamification Error", e); }
+
+    // 4. NOTIFICATION TRIGGER (Simulation)
+    // In a real app, this emits a Socket.io event to the targetUser
+    // notificationService.send(targetUserId, 'new_match_request', user.username);
 
     res.status(200).json({
-      success: true,
-      message: 'Match request sent',
-      data: result
+        success: true,
+        message: 'Connection signal sent',
+        data: {
+            ...result,
+            rewards: {
+                xp: xpAwarded,
+                streakBonus,
+                remainingRequests: DAILY_LIMIT - (dailyRequests + 1)
+            }
+        }
     });
-  });
+});
 
   getComplementaryUsers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;

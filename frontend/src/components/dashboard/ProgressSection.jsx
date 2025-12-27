@@ -1,123 +1,147 @@
 import React, { useEffect, useState } from "react";
-import StatsCard from "./StatsCard";
+import { motion } from "framer-motion";
 import { useAuth } from "../../auth/AuthContext";
 import { getUserStatistics } from "../../services/userStatistics.service";
-import { Zap, Trophy, Target, Loader2 } from "lucide-react"; // Import Icons
-
-// Logic to calculate Level based on XP
-const calculateLevel = (xp) => {
-  const baseXP = 1000;
-  const level = Math.floor(xp / baseXP) + 1;
-  const nextLevelXP = level * baseXP;
-  const progress = ((xp % baseXP) / baseXP) * 100;
-  return { level, progress, nextLevelXP };
-};
-
-/* Futuristic Skeleton */
-const SkeletonCard = () => (
-  <div className="h-40 rounded-2xl bg-white/5 border border-white/5 animate-pulse overflow-hidden relative">
-    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
-  </div>
-);
+import StatsCard from "./StatsCard"; // Ensure this component exists
 
 export default function ProgressSection() {
   const { token, user, loading: authLoading } = useAuth();
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({
+    xp: 0,
+    level: 1,
+    activeStreak: 0,
+    statistics: { totalMatches: 0, successfulMatches: 0, hoursContributed: 0 }
+  });
   const [loading, setLoading] = useState(true);
 
-  const userId = user?.id || user?._id || user?.userId;
+  // Calculate Level Progress
+  const calculateProgress = (xp) => {
+    const baseXP = 1000; // XP needed per level
+    const progress = ((xp % baseXP) / baseXP) * 100;
+    const nextLevelXP = baseXP - (xp % baseXP);
+    return { progress, nextLevelXP };
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
-    async function fetchStats() {
+
+    const fetchStats = async () => {
       try {
-        const data = await getUserStatistics(token, user?._id);
-        setStats(data);
+        const data = await getUserStatistics(token, user._id);
+        if (data) {
+          setStats(prev => ({ ...prev, ...data }));
+        }
       } catch (err) {
-        console.error("Statistics error:", err.message);
+        console.error("Stats sync failed - using cached/default values");
       } finally {
         setLoading(false);
       }
-    }
+    };
+
     fetchStats();
   }, [token, user, authLoading]);
 
-  // Loading State
-  if (authLoading || loading) {
+  const { progress, nextLevelXP } = calculateProgress(stats.xp || 0);
+
+  if (loading && !stats.xp) {
     return (
-      <div className="w-full">
-        <div className="flex items-center gap-3 mb-6">
-           <div className="h-8 w-48 bg-white/10 rounded animate-pulse" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <SkeletonCard /><SkeletonCard /><SkeletonCard />
-        </div>
-      </div>
+      <div className="w-full h-48 animate-pulse bg-white/5 rounded-3xl mb-8 border border-white/5" />
     );
   }
 
-  if (!stats) return null;
-
-  // --- Out of the Box Logic ---
-  const { level, progress } = calculateLevel(stats.xp);
-  
-  // Dynamic Streak Meta
-  let streakColor = "blue";
-  let streakMeta = "Start your journey";
-  
-  if (stats.activeStreak > 0) {
-      streakColor = stats.activeStreak > 5 ? "orange" : "green";
-      streakMeta = stats.activeStreak > 5 ? "🔥 On Fire!" : "Building Momentum";
-  }
-
   return (
-    <section className="relative overflow-hidden">
-      {/* Section Header with glowing accent */}
-      <div className="flex items-center gap-3 mb-8 ml-3 mt-3 relative z-10">
-        <div className="p-2 bg-indigo-500/20 rounded-lg border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-            <Trophy className="text-indigo-400 w-6 h-6" />
-        </div>
+    <motion.section 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative mb-8"
+    >
+      {/* Header with XP Bar */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 px-2">
         <div>
-            <h2 className="text-white text-2xl font-bold leading-tight">
-             Dashboard Overview
-            </h2>
-            <p className="text-gray-400 text-sm">Real-time performance metrics</p>
+          <h2 className="text-2xl font-black text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-yellow-400">bolt</span>
+            Level {stats.level || 1}
+          </h2>
+          <p className="text-gray-400 text-sm mt-1">
+            <span className="text-white font-bold">{nextLevelXP} XP</span> until Level {stats.level + 1}
+          </p>
+        </div>
+        
+        {/* XP Progress Bar */}
+        <div className="w-full md:w-1/2 lg:w-1/3">
+          <div className="flex justify-between text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">
+            <span>Progress</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-3 w-full bg-gray-800 rounded-full overflow-hidden border border-white/5 relative">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 1.5, ease: "circOut" }}
+              className="h-full bg-gradient-to-r from-blue-600 via-purple-500 to-blue-400 relative"
+            >
+              {/* Shimmer Effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full -translate-x-full animate-[shimmer_2s_infinite]" />
+            </motion.div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 perspective-1000">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Card 1: XP & Leveling */}
-        <StatsCard
-          label={`Level ${level} User`}
-          value={stats.xp}
-          meta={`${Math.round(progress)}% to Level ${level + 1}`}
-          icon={Zap}
-          color="purple"
-          delay={0.1}
+        <StatBox 
+          label="Total XP" 
+          value={stats.xp?.toLocaleString()} 
+          icon="verified" 
+          color="text-yellow-400"
+          bg="bg-yellow-400/10" 
+          border="border-yellow-400/20"
         />
 
-        {/* Card 2: Matches */}
-        <StatsCard
-          label="Sessions Completed"
-          value={stats.statistics.totalMatches}
-          meta="Total Mentorships"
-          icon={Target}
-          color="blue"
-          delay={0.2}
+        <StatBox 
+          label="Active Streak" 
+          value={`${stats.activeStreak || 0} Days`} 
+          icon="local_fire_department" 
+          color="text-orange-500"
+          bg="bg-orange-500/10"
+          border="border-orange-500/20"
         />
 
-        {/* Card 3: Streak */}
-        <StatsCard
-          label="Active Streak"
-          value={stats.activeStreak}
-          meta={streakMeta}
-          icon={Trophy}
-          color={streakColor}
-          delay={0.3}
+        <StatBox 
+          label="Mentorships" 
+          value={stats.statistics?.totalMatches || 0} 
+          icon="handshake" 
+          color="text-blue-400"
+          bg="bg-blue-500/10"
+          border="border-blue-500/20"
         />
-        
+
+        <StatBox 
+          label="Hours Coded" 
+          value={stats.statistics?.hoursContributed || 0} 
+          icon="schedule" 
+          color="text-purple-400"
+          bg="bg-purple-500/10"
+          border="border-purple-500/20"
+        />
+
       </div>
-    </section>
+    </motion.section>
+  );
+}
+
+// Micro-Component for Stat Box
+function StatBox({ label, value, icon, color, bg, border }) {
+  return (
+    <div className={`p-5 rounded-2xl border ${border} ${bg} backdrop-blur-sm hover:scale-[1.02] transition-transform`}>
+      <div className="flex items-start justify-between mb-2">
+        <span className={`material-symbols-outlined ${color} text-2xl`}>{icon}</span>
+      </div>
+      <div>
+        <h4 className="text-2xl font-black text-white tracking-tight">{value}</h4>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{label}</p>
+      </div>
+    </div>
   );
 }

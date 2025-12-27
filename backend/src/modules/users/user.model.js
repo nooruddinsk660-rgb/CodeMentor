@@ -201,6 +201,18 @@ const userSchema = new mongoose.Schema({
       }
     }
   ],
+
+  dailyLog: {
+    lastQuestDate: { 
+      type: Date, 
+      default: null 
+    },
+
+    currentStreak: { 
+      type: Number, 
+      default: 0 
+    }
+  },
   
   isActive: { 
     type: Boolean, 

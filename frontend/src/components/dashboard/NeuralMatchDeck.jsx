@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom"; // <--- 1. Import Navigation
 import { getRecommendedMatches, requestConnection } from "../../services/match.service";
@@ -20,24 +20,33 @@ export default function NeuralMatchDeck() {
   }, [token, authLoading]);
 
   // --- 2. Handle Actions (Swipe OR Button Click) ---
-  const handleAction = (direction) => {
-    const user = matches[currentIndex]?.user;
-    if (!user) return;
+  const handleAction = useCallback((direction) => {
+    if (currentIndex >= matches.length || loading) return;
 
-    setExitDirection(direction); // Trigger the fly-off animation
+    setExitDirection(direction);
 
+    // Call API if "Like" (Right)
     if (direction === "right") {
-      requestConnection(token, user._id)
-        .then(() => console.log("Connection requested"))
-        .catch(console.error);
+        const user = matches[currentIndex]?.user;
+        if (user) requestConnection(token, user._id).catch(console.error);
     }
 
-    // Wait 200ms for animation to play, then remove card
+    // Animation Delay
     setTimeout(() => {
         setCurrentIndex((prev) => prev + 1);
         setExitDirection(null);
     }, 200);
-  };
+  }, [currentIndex, matches, loading, token]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+        if (e.key === "ArrowLeft") handleAction("left");
+        if (e.key === "ArrowRight") handleAction("right");
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleAction]);
 
   if (loading || authLoading) return <ScanningAnimation />;
   if (currentIndex >= matches.length) return <EmptyState />;

@@ -17,6 +17,7 @@ const githubRoutes = require('./modules/github/github.routes');
 const matchRoutes = require('./modules/matchmaking/match.routes');
 const aiRoutes = require('./modules/ai/ai.routes');
 const skillsRoutes = require("./modules/skills/skills.routes");
+const dailyRoutes = require("./modules/daily/daily.routes")
 
 const typeDefs = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
@@ -296,6 +297,7 @@ async function createServer() {
   app.use('/matches', generalLimiter, matchRoutes);
   app.use('/ai', generalLimiter, aiRoutes);
   app.use("/skills", skillsRoutes);
+  app.use('/daily', dailyRoutes);
 
   // Apply analysis-specific rate limiting to specific endpoint
   app.post('/github/analyze/:username', analysisLimiter);

@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
 
       if (storedUser && storedToken) {
         try {
-          // ✅ CRITICAL: Verify token is still valid on mount
+          // Verify token validity on mount
           const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
             setUser(data.data);
             setToken(storedToken);
           } else {
-            // Token expired or invalid - clear storage
+            // Token expired - clear storage
             localStorage.removeItem("user");
             localStorage.removeItem("token");
           }
@@ -58,7 +58,6 @@ export const AuthProvider = ({ children }) => {
         }
       });
 
-      // ✅ Auto-logout on 401 (token expired)
       if (response.status === 401) {
         logout();
         window.location.href = '/login?session=expired';
@@ -67,21 +66,18 @@ export const AuthProvider = ({ children }) => {
       return response;
     };
 
-    // Attach to window for global use (optional)
     window.authFetch = interceptor;
   }, [token]);
 
   const login = ({ user, token }) => {
     setUser(user);
     setToken(token);
-
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("token", token);
   };
 
   const logout = async () => {
     try {
-      // ✅ Call backend logout endpoint
       if (token) {
         await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
           method: 'POST',
@@ -94,12 +90,19 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Always clear local state
       setUser(null);
       setToken(null);
       localStorage.removeItem("user");
       localStorage.removeItem("token");
     }
+  };
+
+  const updateUser = (updatedData) => {
+    // 1. Update React State (Instant UI update)
+    setUser(updatedData);
+
+    // 2. Update Local Storage (Persist on refresh)
+    localStorage.setItem("user", JSON.stringify(updatedData));
   };
 
   return (
@@ -111,6 +114,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

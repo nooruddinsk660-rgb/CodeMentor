@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../../auth/AuthContext";
 import { getUserStatistics } from "../../services/userStatistics.service";
-import StatsCard from "./StatsCard"; // Ensure this component exists
 
 export default function ProgressSection() {
   const { token, user, loading: authLoading } = useAuth();
+  
   const [stats, setStats] = useState({
     xp: 0,
     level: 1,
@@ -14,16 +14,26 @@ export default function ProgressSection() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Calculate Level Progress
+  // --- ⚡️ THE FIX: USE LIVE DATA INSTANTLY ---
+  // If 'user.xp' (from Context) exists, use it! Otherwise, fallback to fetched 'stats'.
+  const currentXP = user?.xp ?? stats.xp ?? 0;
+  const currentLevel = user?.level ?? stats.level ?? 1;
+  const currentStreak = user?.dailyLog?.currentStreak ?? stats.activeStreak ?? 0;
+  // -------------------------------------------
+
+  // Calculate Level Progress using LIVE variable (currentXP)
   const calculateProgress = (xp) => {
-    const baseXP = 1000; // XP needed per level
+    const baseXP = 1000; 
     const progress = ((xp % baseXP) / baseXP) * 100;
     const nextLevelXP = baseXP - (xp % baseXP);
     return { progress, nextLevelXP };
   };
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    // 1. Guard Clause: Stop if no token
+    if (authLoading || !user || !token) {
+        return; 
+    }
 
     const fetchStats = async () => {
       try {
@@ -32,18 +42,19 @@ export default function ProgressSection() {
           setStats(prev => ({ ...prev, ...data }));
         }
       } catch (err) {
-        console.error("Stats sync failed - using cached/default values");
+        console.error("Stats sync failed:", err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, [token, user, authLoading]);
+  }, [token, user, authLoading]); 
 
-  const { progress, nextLevelXP } = calculateProgress(stats.xp || 0);
+  // Use the calculated LIVE variables here
+  const { progress, nextLevelXP } = calculateProgress(currentXP);
 
-  if (loading && !stats.xp) {
+  if (loading && !stats.xp && !user) {
     return (
       <div className="w-full h-48 animate-pulse bg-white/5 rounded-3xl mb-8 border border-white/5" />
     );
@@ -60,10 +71,10 @@ export default function ProgressSection() {
         <div>
           <h2 className="text-2xl font-black text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-yellow-400">bolt</span>
-            Level {stats.level || 1}
+            Level {currentLevel}  {/* CHANGED to currentLevel */}
           </h2>
           <p className="text-gray-400 text-sm mt-1">
-            <span className="text-white font-bold">{nextLevelXP} XP</span> until Level {stats.level + 1}
+            <span className="text-white font-bold">{nextLevelXP} XP</span> until Level {currentLevel + 1}
           </p>
         </div>
         
@@ -80,7 +91,6 @@ export default function ProgressSection() {
               transition={{ duration: 1.5, ease: "circOut" }}
               className="h-full bg-gradient-to-r from-blue-600 via-purple-500 to-blue-400 relative"
             >
-              {/* Shimmer Effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full -translate-x-full animate-[shimmer_2s_infinite]" />
             </motion.div>
           </div>
@@ -92,7 +102,7 @@ export default function ProgressSection() {
         
         <StatBox 
           label="Total XP" 
-          value={stats.xp?.toLocaleString()} 
+          value={currentXP.toLocaleString()}  // CHANGED to currentXP
           icon="verified" 
           color="text-yellow-400"
           bg="bg-yellow-400/10" 
@@ -101,7 +111,7 @@ export default function ProgressSection() {
 
         <StatBox 
           label="Active Streak" 
-          value={`${stats.activeStreak || 0} Days`} 
+          value={`${currentStreak} Days`} // CHANGED to currentStreak
           icon="local_fire_department" 
           color="text-orange-500"
           bg="bg-orange-500/10"

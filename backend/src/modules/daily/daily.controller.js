@@ -3,35 +3,36 @@ const { asyncHandler } = require('../../common/middleware/errorHandler');
 
 class DailyController {
   
-  // ✅ FIX 1: Combine the logic. Get Briefing + Matrix in one go.
+  // GET /api/daily/briefing
   getBriefing = asyncHandler(async (req, res) => {
     // 1. Get the quest/streak data
-    const briefing = await dailyService.getDailyBriefing(req.user.userId);
+    // Note: ensure req.user.userId matches your JWT payload structure
+    const userId = req.user.userId || req.user.id || req.user._id;
+    const briefing = await dailyService.getDailyBriefing(userId);
     
     // 2. Get the heatmap data
-    const matrix = await dailyService.getActivityHeatmap(req.user.userId);
+    const matrix = await dailyService.getActivityHeatmap(userId);
 
     res.status(200).json({
       success: true,
       data: {
         ...briefing,
-        matrix // <--- Pass this to frontend
+        matrix // <--- Pass this to frontend so CodePulseMatrix can use it
       }
     });
   });
 
-  // ✅ FIX 2: Actually CALL the service.
+  // POST /api/daily/quest/complete
   completeQuest = asyncHandler(async (req, res) => {
-    // OLD CODE (BROKEN):
-    // res.status(200).json({ success: true, message: 'Quest completed! XP Awarded.' });
+    const userId = req.user.userId || req.user.id;
+    const { xp } = req.body; // Get XP from frontend request
 
-    // NEW CODE (WORKING):
-    // Call the service to save to DB and calculate XP
-    const result = await dailyService.completeQuest(req.user.userId);
+    // Pass xp to the service
+    const result = await dailyService.completeQuest(userId, xp);
     
     res.status(200).json({
       success: true,
-      data: result // Returns { newXP: 1200, newStreak: 5 }
+      data: result
     });
   });
 }

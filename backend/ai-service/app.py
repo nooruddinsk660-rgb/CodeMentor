@@ -191,6 +191,23 @@ class GitHubAnalysisRequest(BaseModel):
             raise ValueError('Username cannot be empty')
         return v
 
+class SkillData(BaseModel):
+    name: str
+    level: str
+    gravityScore: float = Field(default=0.0, ge=0.0)
+
+class TrajectoryRequest(BaseModel):
+    skills: List[SkillData]
+    target_role: Optional[str] = Field(default="Senior Full Stack Engineer")
+
+class TrajectoryResponse(BaseModel):
+    status: str
+    trajectory: str
+    drift_warnings: List[str]
+    ai_analysis: str
+    gravity_index: float
+    processing_time: float
+
 class HealthResponse(BaseModel):
     status: str
     is_model_loaded: bool
@@ -512,6 +529,68 @@ async def analyze_github_profile(request: GitHubAnalysisRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to analyze GitHub profile"
+        )
+    
+@app.post("/analyze-trajectory", response_model=TrajectoryResponse)
+async def analyze_trajectory(request: TrajectoryRequest):
+    """
+    Analyze career trajectory based on skill gravity and decay.
+    Distinguishes between 'active experts' and 'decaying experts'.
+    """
+    start = time.time()
+    try:
+        logger.info(f"Analyzing trajectory for {len(request.skills)} skills")
+        
+        drift_warnings = []
+        trajectory_status = "stable"
+        total_gravity = 0
+        
+        # 1. Analyze Physics of each skill
+        for skill in request.skills:
+            # Map text levels to numbers for comparison
+            level_map = {"beginner": 0.3, "intermediate": 0.6, "advanced": 0.85, "expert": 1.0}
+            # Handle case-insensitive matching
+            proficiency = level_map.get(skill.level.lower(), 0.1)
+            
+            # Accumulate system gravity
+            total_gravity += skill.gravityScore
+            
+            # CRITICAL LOGIC: Detect Decay
+            # If proficiency is high (Expert) but gravity is low (Inactive), that is a Drift.
+            if proficiency >= 0.8 and skill.gravityScore < 0.6:
+                drift_warnings.append(
+                    f"⚠️ High Decay in {skill.name}: You are an {skill.level}, but your activity is low."
+                )
+                trajectory_status = "drifting"
+
+        # 2. Generate Insight
+        if trajectory_status == "drifting":
+            analysis = (
+                f"Drift Detected. {len(drift_warnings)} core skills are decaying. "
+                "Your expertise is becoming theoretical. Recommended: Build a small project this weekend."
+            )
+        elif total_gravity > (len(request.skills) * 0.7):
+            analysis = "Excellent Momentum. Your gravity is high, indicating consistent daily learning."
+            trajectory_status = "accelerating"
+        else:
+            analysis = "Stable but static. To reach Senior level, increase daily commit frequency."
+
+        processing_time = time.time() - start
+
+        return TrajectoryResponse(
+            status="success",
+            trajectory=trajectory_status,
+            drift_warnings=drift_warnings,
+            ai_analysis=analysis,
+            gravity_index=round(total_gravity / max(len(request.skills), 1), 2),
+            processing_time=processing_time
+        )
+
+    except Exception as e:
+        logger.error(f"Trajectory analysis failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Trajectory analysis failed: {str(e)}"
         )
 
 # ===== MAIN ENTRY POINT =====

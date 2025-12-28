@@ -339,6 +339,56 @@ class AIService {
   }
 
   /**
+   * Analyze skill trajectory and gravity
+   * @param {Array<Object>} skills - Array of skill objects {name, level, gravityScore}
+   * @param {string} targetRole - Optional target role
+   * @returns {Promise<Object>} Trajectory analysis
+   */
+  async analyzeSkillTrajectory(skills, targetRole = 'Senior Developer') {
+    try {
+      // Input validation
+      if (!Array.isArray(skills)) {
+        throw new Error('Skills must be an array of objects');
+      }
+
+      if (skills.length === 0) {
+        return {
+          trajectory: 'unknown',
+          drift_warnings: [],
+          ai_analysis: 'No skills data available to analyze.',
+          gravity_index: 0
+        };
+      }
+
+      // Sanitize inputs to match Python Pydantic model
+      const sanitizedSkills = skills.map(s => ({
+        name: String(s.name || '').substring(0, 100),
+        level: String(s.level || 'intermediate'),
+        gravityScore: Number(s.gravityScore) || 0
+      }));
+
+      logger.debug(`Analyzing trajectory for ${sanitizedSkills.length} skills`);
+
+      const response = await this.makeRequest('/analyze-trajectory', {
+        skills: sanitizedSkills,
+        target_role: targetRole
+      });
+
+      return response;
+
+    } catch (error) {
+      logger.error('Error analyzing trajectory:', error);
+      // Return safe fallback instead of crashing dashboard
+      return {
+        trajectory: 'unavailable',
+        drift_warnings: [],
+        ai_analysis: 'AI Trajectory Engine is temporarily offline.',
+        gravity_index: 0
+      };
+    }
+  }
+
+  /**
    * Check if AI service is healthy
    * @returns {Promise<boolean>} Service health status
    */

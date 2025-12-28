@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL; // e.g., http://localhost:5000/api
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export async function getRecommendedMatches(token) {
   // ✅ FIX: Use '/matches' (plural) to match backend route

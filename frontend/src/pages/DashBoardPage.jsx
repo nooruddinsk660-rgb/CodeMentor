@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { getAllSkills, updateUserSkills, getMasterSkillList } from "../services/userSkills.service";
+import { getDashboardIntelligence } from "../services/ai.service";
+
 import Sidebar from "../components/dashboard/Sidebar";
 import Header from "../components/dashboard/Header";
 import DailyRoutine from "../components/dashboard/DailyRoutine";
 import ProgressSection from "../components/dashboard/ProgressSection";
 import SkillsSection from "../components/dashboard/SkillsSection";
-import ActivityChart from "../components/dashboard/ActivityChart";
 import CodePulseMatrix from "../components/dashboard/CodePulseMatrix";
-import NeuralMatchDeck from "../components/dashboard/NeuralMatchDeck"; 
+import NeuralMatchDeck from "../components/dashboard/NeuralMatchDeck";
 import Footer from "../components/dashboard/Footer";
+import GravityField from "../components/dashboard/GravityField";
+import TrajectoryCard from "../components/dashboard/TrajectoryCard";
+
 import { Toaster, toast } from 'react-hot-toast';
 import { motion } from "framer-motion";
 
@@ -17,12 +21,12 @@ export default function DashboardPage() {
   const { token } = useAuth();
   
   const [skills, setSkills] = useState([]);
-  const [globalSkills, setGlobalSkills] = useState([]); 
+  const [globalSkills, setGlobalSkills] = useState([]);
+  const [intelligence, setIntelligence] = useState(null);
   
   const [loadingSkills, setLoadingSkills] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // 1. Fetch Skills (User + Master List) on Mount
   useEffect(() => {
     if (!token) return;
 
@@ -30,15 +34,18 @@ export default function DashboardPage() {
     
     Promise.all([
       getAllSkills(token),
-      getMasterSkillList(token) 
+      getMasterSkillList(token),
+      getDashboardIntelligence() // 5. Fetch Intelligence
     ])
-    .then(([userData, masterData]) => {
+    .then(([userData, masterData, aiData]) => {
       setSkills(userData || []);
-      setGlobalSkills(masterData || []); 
+      setGlobalSkills(masterData || []);
+      // aiData returns { stats: ..., intelligence: ... }
+      setIntelligence(aiData?.intelligence || null);
     })
     .catch((err) => {
       console.error(err);
-      toast.error("Failed to load skills");
+      toast.error("Failed to load dashboard data");
     })
     .finally(() => {
       setLoadingSkills(false);
@@ -91,7 +98,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex bg-[#030712] relative overflow-hidden selection:bg-blue-500/30">
       
-      {/* 1. AMBIENT BACKGROUND EFFECTS */}
+      {/* AMBIENT BACKGROUND EFFECTS */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-900/10 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-900/10 blur-[120px] rounded-full" />
@@ -111,18 +118,50 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <DailyRoutine />
+            {/* PASS THE DATA PROPS HERE */}
+            <DailyRoutine 
+              intelligence={intelligence} 
+              skills={skills} 
+              streak={skills.length > 0 ? 5 : 0} // Replace '5' with user.dailyLog.currentStreak once you pull user data fully
+            />
           </motion.div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
             <div className="lg:col-span-2 space-y-8">
-              <section>
-                {/* 2. REPLACED TEXT HEADER WITH MODERN HEADER */}
-                <div className="flex items-center justify-between mb-4">
+              
+              {/* --- NEW: INTELLIGENCE LAYER --- */}
+              {intelligence && (
+                <motion.section 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-between">
                      <h2 className="text-white text-[22px] font-bold flex items-center gap-2">
+                       <span className="material-symbols-outlined text-cyan-400">monitoring</span>
+                       Skill Intelligence
+                     </h2>
+                  </div>
+
+                  {/* 1. Trajectory Insight */}
+                  <TrajectoryCard intelligence={intelligence} />
+
+                  {/* 2. Gravity Physics Visualizer */}
+                  <GravityField 
+                    skills={skills} 
+                    driftWarnings={intelligence.drift_warnings} 
+                  />
+                </motion.section>
+              )}
+              {/* ------------------------------- */}
+
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-white text-[22px] font-bold flex items-center gap-2">
                         <span className="material-symbols-outlined text-purple-400">psychology</span>
                         Skill Matrix
-                     </h2>
+                      </h2>
                 </div>
 
                 {loadingSkills ? (
@@ -140,16 +179,14 @@ export default function DashboardPage() {
               </section>
               
               <section>
-                 {/* 3. NEW ACTIVITY MATRIX */}
                 <CodePulseMatrix /> 
               </section>
             </div>
             
             <aside className="lg:col-span-1">
-              <div className="sticky top-8"> {/* Keeps deck in view while scrolling */}
+              <div className="sticky top-8">
                   <NeuralMatchDeck /> 
                   
-                  {/* Keyboard Hint */}
                   <div className="flex justify-center gap-4 mt-4 text-[10px] text-gray-500 font-mono opacity-50">
                     <span className="border border-gray-700 px-2 py-1 rounded">← NOPE</span>
                     <span className="border border-gray-700 px-2 py-1 rounded">CONNECT →</span>

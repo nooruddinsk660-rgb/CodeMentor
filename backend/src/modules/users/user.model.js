@@ -12,6 +12,16 @@ const skillSchema = new mongoose.Schema({
     enum: ['beginner', 'intermediate', 'advanced', 'expert'],
     default: 'intermediate'
   },
+
+  skills: [
+    {
+      name: { type: String, required: true },
+      level: { type: String, required: true },
+      // ADD THIS:
+      gravityScore: { type: Number, default: 0 }, 
+      lastUsed: { type: Date, default: Date.now }
+    }
+  ],
   
   /* --- ADD THESE NEW FIELDS --- */
   logo: {

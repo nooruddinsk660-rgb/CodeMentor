@@ -18,14 +18,17 @@ import { Toaster, toast } from 'react-hot-toast';
 import { motion } from "framer-motion";
 
 export default function DashboardPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   
   const [skills, setSkills] = useState([]);
   const [globalSkills, setGlobalSkills] = useState([]);
   const [intelligence, setIntelligence] = useState(null);
+  const [stats, setStats] = useState(null);
   
   const [loadingSkills, setLoadingSkills] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const currentStreak = user?.dailyLog?.currentStreak || 0;
 
   useEffect(() => {
     if (!token) return;
@@ -42,15 +45,16 @@ export default function DashboardPage() {
       setGlobalSkills(masterData || []);
       // aiData returns { stats: ..., intelligence: ... }
       setIntelligence(aiData?.intelligence || null);
-    })
-    .catch((err) => {
-      console.error(err);
-      toast.error("Failed to load dashboard data");
-    })
-    .finally(() => {
-      setLoadingSkills(false);
-    });
-  }, [token]);
+      setStats(aiData?.stats || null); // <--- Save the stats here!
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to load dashboard data");
+      })
+      .finally(() => {
+        setLoadingSkills(false);
+      });
+    }, [token]);
 
   // 2. Add Skill Logic
   const handleAddSkill = async (newSkillObj) => {
@@ -122,7 +126,7 @@ export default function DashboardPage() {
             <DailyRoutine 
               intelligence={intelligence} 
               skills={skills} 
-              streak={skills.length > 0 ? 5 : 0} // Replace '5' with user.dailyLog.currentStreak once you pull user data fully
+              streak={currentStreak || 0}
             />
           </motion.div>
           
@@ -145,12 +149,13 @@ export default function DashboardPage() {
                   </div>
 
                   {/* 1. Trajectory Insight */}
-                  <TrajectoryCard intelligence={intelligence} />
+                  <TrajectoryCard intelligence={intelligence}  stats={stats}/>
 
                   {/* 2. Gravity Physics Visualizer */}
                   <GravityField 
                     skills={skills} 
                     driftWarnings={intelligence.drift_warnings} 
+                    stats={stats}
                   />
                 </motion.section>
               )}

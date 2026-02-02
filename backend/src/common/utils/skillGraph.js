@@ -201,6 +201,39 @@ class SkillGraphService {
   }
 
   /**
+   * Find mentors (Expert/Advanced users in shared skills)
+   * High Gravity Matching
+   */
+  async findMentors(userId, limit = 10) {
+    try {
+      const cypher = `
+        MATCH (mentee:User {userId: $userId})-[r1:HAS_SKILL]->(s:Skill)<-[r2:HAS_SKILL]-(mentor:User)
+        WHERE mentee <> mentor
+        AND (r1.proficiency = 'beginner' OR r1.proficiency = 'intermediate')
+        AND (r2.proficiency = 'advanced' OR r2.proficiency = 'expert')
+        WITH mentor, count(DISTINCT s) as expertiseOverlap
+        ORDER BY expertiseOverlap DESC
+        LIMIT toInteger($limit)
+        RETURN mentor.userId as userId,
+               mentor.username as username,
+               mentor.xp as xp,
+               expertiseOverlap
+      `;
+
+      const params = {
+        userId: userId.toString(),
+        limit: parseInt(limit, 10)
+      };
+
+      const result = await neo4jConnection.executeRead(cypher, params);
+      return result;
+    } catch (error) {
+      logger.error('Error finding mentors:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get skill recommendations based on user's current skills
    * FIX: Added toInteger() to LIMIT clause
    */

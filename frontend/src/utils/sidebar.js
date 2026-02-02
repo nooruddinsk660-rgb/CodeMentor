@@ -6,7 +6,7 @@ export function sidebarLinkClass(isActive) {
   ].join(" ");
 }
 
-export const COLLAPSE_STORAGE_KEY = "codementor:sidebar_collapse_v1";
+export const COLLAPSE_STORAGE_KEY = "orbitdev:sidebar_collapse_v1";
 
 export function readCollapsedState() {
   try {
@@ -21,5 +21,5 @@ export function readCollapsedState() {
 export function writeCollapsedState(state) {
   try {
     localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+  } catch { }
 }

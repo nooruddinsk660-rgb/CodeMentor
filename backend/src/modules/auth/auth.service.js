@@ -63,9 +63,11 @@ class AuthService {
     try {
       const { email, password } = credentials;
 
-      // Find user and include password field
-      const user = await User.findOne({ email: email.toLowerCase() })
-        .select('+password');
+      // Find user by email OR username
+      const identifier = email.toLowerCase();
+      const user = await User.findOne({
+        $or: [{ email: identifier }, { username: identifier }]
+      }).select('+password');
 
       if (!user) {
         throw new UnauthorizedError('Invalid email or password');

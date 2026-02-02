@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
 
         <div>
-          <p className="text-white text-lg font-bold">CodeMentor</p>
+          <p className="text-white text-lg font-bold">OrbitDev</p>
           <p className="text-[#90a6cb] text-sm mt-4">
             AI-powered mentorship to help you grow.
           </p>
@@ -39,7 +39,7 @@ export default function Footer() {
 
       <div className="mt-8 pt-8 border-t border-[#223049] text-center">
         <p className="text-[#90a6cb] text-sm">
-          © 2024 CodeMentor. All rights reserved.
+          © 2026 OrbitDev. All rights reserved.
         </p>
       </div>
     </footer>

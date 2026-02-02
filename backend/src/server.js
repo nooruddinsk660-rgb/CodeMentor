@@ -14,10 +14,11 @@ const { errorHandler, notFoundHandler } = require('./common/middleware/errorHand
 const authRoutes = require('./modules/auth/auth.routes');
 const userRoutes = require('./modules/users/user.routes');
 const githubRoutes = require('./modules/github/github.routes');
-const matchRoutes = require('./modules/matchmaking/match.routes');
+
 const aiRoutes = require('./modules/ai/ai.routes');
 const skillsRoutes = require("./modules/skills/skills.routes");
 const dailyRoutes = require("./modules/daily/daily.routes")
+const roadmapRoutes = require('./modules/roadmaps/roadmap.routes');
 
 const typeDefs = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
@@ -63,16 +64,17 @@ async function createServer() {
   // CORS with strict configuration
   const corsOptions = {
     origin: (origin, callback) => {
-      const allowedOrigins = Array.isArray(config.cors.origin) 
-        ? config.cors.origin 
+      const allowedOrigins = Array.isArray(config.cors.origin)
+        ? config.cors.origin
         : [config.cors.origin];
-      
+
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        logger.warn(`CORS blocked request from origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
+        const msg = `CORS blocked request from origin: ${origin}`;
+        logger.warn(msg);
+        callback(new Error(msg));
       }
     },
     credentials: config.cors.credentials,
@@ -81,7 +83,7 @@ async function createServer() {
     exposedHeaders: ['X-Total-Count'],
     maxAge: 86400 // 24 hours
   };
-  
+
   app.use(cors(corsOptions));
 
   // Response compression
@@ -96,7 +98,7 @@ async function createServer() {
   }));
 
   // Body parsing with size limits
-  app.use(express.json({ 
+  app.use(express.json({
     limit: '10mb',
     verify: (req, res, buf) => {
       try {
@@ -107,9 +109,9 @@ async function createServer() {
       }
     }
   }));
-  
-  app.use(express.urlencoded({ 
-    extended: true, 
+
+  app.use(express.urlencoded({
+    extended: true,
     limit: '10mb',
     parameterLimit: 1000
   }));
@@ -146,9 +148,9 @@ async function createServer() {
   const generalLimiter = rateLimit({
     windowMs: config.rateLimit.windowMs,
     max: config.rateLimit.max,
-    message: { 
-      success: false, 
-      error: 'Too many requests, please try again later.' 
+    message: {
+      success: false,
+      error: 'Too many requests, please try again later.'
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -164,11 +166,11 @@ async function createServer() {
   // Strict rate limiter for auth endpoints
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 requests per window
+    max: 100, // Increased for development convenience
     skipSuccessfulRequests: false,
-    message: { 
-      success: false, 
-      error: 'Too many authentication attempts, please try again later.' 
+    message: {
+      success: false,
+      error: 'Too many authentication attempts, please try again later.'
     }
   });
 
@@ -176,17 +178,17 @@ async function createServer() {
   const analysisLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10, // 10 analyses per hour
-    message: { 
-      success: false, 
-      error: 'Analysis limit reached, please try again later.' 
+    message: {
+      success: false,
+      error: 'Analysis limit reached, please try again later.'
     }
   });
 
   // ===== REQUEST LOGGING =====
-  
+
   app.use((req, res, next) => {
     const start = Date.now();
-    
+
     res.on('finish', () => {
       const duration = Date.now() - start;
       logger.http(`${req.method} ${req.path}`, {
@@ -196,7 +198,7 @@ async function createServer() {
         userAgent: req.get('user-agent')
       });
     });
-    
+
     next();
   });
 
@@ -206,7 +208,7 @@ async function createServer() {
   app.get('/', (req, res) => {
     res.status(200).json({
       success: true,
-      message: 'CodeMentor AI Backend API',
+      message: 'OrbitDev AI Backend API',
       version: '1.0.0',
       environment: config.env,
       endpoints: {
@@ -226,8 +228,8 @@ async function createServer() {
 
   // Health check endpoint
   app.get('/health', (req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
+    res.status(200).json({
+      status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: config.env,
@@ -239,7 +241,7 @@ async function createServer() {
   app.get('/api/status', (req, res) => {
     res.status(200).json({
       success: true,
-      service: 'CodeMentor AI Backend',
+      service: 'OrbitDev AI Backend',
       version: '1.0.0',
       environment: config.env,
       timestamp: new Date().toISOString()
@@ -275,29 +277,33 @@ async function createServer() {
 
   // Start Apollo Server and apply middleware
   await apolloServer.start();
-  apolloServer.applyMiddleware({ 
-    app, 
+  apolloServer.applyMiddleware({
+    app,
     path: '/graphql',
     cors: false, // We already configured CORS
     bodyParserConfig: {
       limit: '5mb'
     }
   });
-  
+
   logger.info('GraphQL endpoint ready at /graphql');
 
   // ===== API ROUTES (AFTER GRAPHQL) =====
 
   // Apply strict rate limiting to auth routes
   app.use('/auth', authLimiter, authRoutes);
-  
+
   // Apply general rate limiting to other routes
   app.use('/users', generalLimiter, userRoutes);
   app.use('/github', generalLimiter, githubRoutes);
-  app.use('/matches', generalLimiter, matchRoutes);
+  app.use('/matchmaking', generalLimiter, require('./modules/matchmaking/match.routes'));
+  app.use('/connect', generalLimiter, require('./modules/connections/connection.routes'));
   app.use('/ai', generalLimiter, aiRoutes);
   app.use("/skills", skillsRoutes);
+  app.use('/quests', generalLimiter, require('./modules/quests/quest.routes'));
+  app.use('/messages', generalLimiter, require('./modules/messages/message.routes'));
   app.use('/daily', dailyRoutes);
+  app.use('/roadmaps', generalLimiter, roadmapRoutes);
 
   // Apply analysis-specific rate limiting to specific endpoint
   app.post('/github/analyze/:username', analysisLimiter);

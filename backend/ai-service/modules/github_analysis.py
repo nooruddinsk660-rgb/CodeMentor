@@ -2,6 +2,7 @@ import requests
 import logging
 from typing import Dict, List, Optional
 from collections import Counter
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ class GitHubAnalyzer:
         self.session = requests.Session()
         self.session.headers.update({
             'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'CodeMentor-AI-Service'
+            'User-Agent': 'OrbitDev-AI-Service'
         })
     
     def analyze_user(self, username: str, access_token: Optional[str] = None) -> Dict:
@@ -91,22 +92,57 @@ class GitHubAnalyzer:
             return []
     
     def _analyze_languages(self, repos: List[Dict]) -> List[Dict]:
-        """Analyze programming languages used across repositories"""
-        language_counter = Counter()
+        """
+        Analyze programming languages with TRUTH ENGINE logic.
+        1. Ignores Forks (Strictly).
+        2. Applies Time Decay (Code > 1 year old is worth 10%).
+        """
+        language_map = {}
+        now = datetime.now(timezone.utc)
         
         for repo in repos:
-            if not repo.get('fork') and repo.get('language'):
-                language_counter[repo['language']] += 1
+            # RULE 1: STRICT TRUTH - Ignore Forks completely
+            if repo.get('fork', False):
+                continue
+            
+            # RULE 2: TIME DECAY - Calculate "Freshness"
+            pushed_at_str = repo.get('pushed_at')
+            if not pushed_at_str:
+                continue
+                
+            try:
+                # Handle GitHub's ISO format
+                pushed_at = datetime.fromisoformat(pushed_at_str.replace('Z', '+00:00'))
+            except ValueError:
+                continue
+
+            days_since_push = (now - pushed_at).days
+            
+            # THE FORMULA: 
+            # If code was pushed today, multiplier is 1.0
+            # If code was pushed 1 year ago, multiplier is 0.1 (Floor)
+            recency_multiplier = max(0.1, 1.0 - (days_since_push / 365))
+
+            lang = repo.get('language')
+            if lang:
+                # Instead of adding +1, we add the "Freshness Score"
+                # Example: Python used today = +1.0 point
+                # Example: Python used 2 years ago = +0.1 point
+                language_map[lang] = language_map.get(lang, 0) + recency_multiplier
         
-        total = sum(language_counter.values())
+        # Recalculate totals based on Weighted Score, not just count
+        total_score = sum(language_map.values())
         
+        # Sort by Score (High Gravity first)
+        sorted_langs = sorted(language_map.items(), key=lambda item: item[1], reverse=True)[:10]
+
         languages = [
             {
                 'language': lang,
-                'count': count,
-                'percentage': round((count / total) * 100, 2) if total > 0 else 0
+                'count': round(score, 2), # We return the score as "count" to keep frontend compatible
+                'percentage': round((score / total_score) * 100, 2) if total_score > 0 else 0
             }
-            for lang, count in language_counter.most_common(10)
+            for lang, score in sorted_langs
         ]
         
         return languages

@@ -12,14 +12,14 @@ class AIService {
     this.failureCount = 0;
     this.circuitOpen = false;
     this.lastFailureTime = null;
-    
+
     // Create axios instance with default config
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
       timeout: this.timeout,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'CodeMentor-Backend/1.0'
+        'User-Agent': 'OrbitDev-Backend/1.0'
       }
     });
 
@@ -72,7 +72,7 @@ class AIService {
   recordFailure() {
     this.failureCount++;
     this.lastFailureTime = Date.now();
-    
+
     if (this.failureCount >= this.circuitBreakerThreshold) {
       this.circuitOpen = true;
       logger.error(`Circuit breaker opened after ${this.failureCount} failures`);
@@ -115,10 +115,10 @@ class AIService {
       }
 
       const response = await this.axiosInstance.post(endpoint, data);
-      
+
       // Record success
       this.recordSuccess();
-      
+
       return response.data;
     } catch (error) {
       const isLastAttempt = attempt >= this.retryAttempts;
@@ -130,14 +130,14 @@ class AIService {
           `AI service request failed. Retry ${attempt}/${this.retryAttempts} in ${delay}ms`,
           { error: error.message }
         );
-        
+
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.makeRequest(endpoint, data, attempt + 1);
       }
 
       // Record failure
       this.recordFailure();
-      
+
       logger.error('AI service request failed after all retries:', {
         endpoint,
         attempt,
@@ -159,7 +159,7 @@ class AIService {
   shouldRetry(error, attempt) {
     // Don't retry if circuit is open
     if (this.circuitOpen) return false;
-    
+
     // Don't retry client errors (4xx) except 429 (rate limit)
     if (error.response) {
       const status = error.response.status;
@@ -167,7 +167,7 @@ class AIService {
         return false;
       }
     }
-    
+
     // Retry on network errors and 5xx errors
     return attempt < this.retryAttempts;
   }
@@ -224,8 +224,8 @@ class AIService {
 
       logger.debug(`Generating embedding for ${sanitizedSkills.length} skills`);
 
-      const response = await this.makeRequest('/embed', { 
-        skills: sanitizedSkills 
+      const response = await this.makeRequest('/embed', {
+        skills: sanitizedSkills
       });
 
       // Validate response
@@ -344,7 +344,7 @@ class AIService {
    * @param {string} targetRole - Optional target role
    * @returns {Promise<Object>} Trajectory analysis
    */
-  async analyzeSkillTrajectory(skills, targetRole = 'Senior Developer') {
+  async analyzeSkillTrajectory(skills, targetRole = 'Senior Developer', lastActivity = new Date()) {
     try {
       // Input validation
       if (!Array.isArray(skills)) {
@@ -353,12 +353,21 @@ class AIService {
 
       if (skills.length === 0) {
         return {
-          trajectory: 'unknown',
-          drift_warnings: [],
-          ai_analysis: 'No skills data available to analyze.',
-          gravity_index: 0
+          trajectory: 'initiation',
+          drift_warnings: ['SYSTEM FRESH: No skill data detected'],
+          ai_analysis: 'User profile empty. Initiating onboarding protocols. Please complete the following missions to calibrate the Career Navigator.',
+          gravity_index: 0,
+          roadmap: [
+            "Initialize Profile: Add your first skill in the Skill Matrix",
+            "Upload Resume or Connect GitHub for automated analysis",
+            "Select a target role to calibrate trajectory"
+          ]
         };
       }
+
+      // Calculate days inactive
+      const lastLoginDate = new Date(lastActivity || Date.now());
+      const daysInactive = Math.floor((Date.now() - lastLoginDate.getTime()) / (1000 * 60 * 60 * 24));
 
       // Sanitize inputs to match Python Pydantic model
       const sanitizedSkills = skills.map(s => ({
@@ -367,11 +376,12 @@ class AIService {
         gravityScore: Number(s.gravityScore) || 0
       }));
 
-      logger.debug(`Analyzing trajectory for ${sanitizedSkills.length} skills`);
+      logger.debug(`Analyzing trajectory for ${sanitizedSkills.length} skills (Inactive: ${daysInactive} days)`);
 
       const response = await this.makeRequest('/analyze-trajectory', {
         skills: sanitizedSkills,
-        target_role: targetRole
+        target_role: targetRole,
+        days_inactive: daysInactive
       });
 
       return response;
@@ -382,7 +392,7 @@ class AIService {
       return {
         trajectory: 'unavailable',
         drift_warnings: [],
-        ai_analysis: 'AI Trajectory Engine is temporarily offline.',
+        ai_analysis: `AI Error: ${error.message}. ${error.response?.data?.detail || ''}`,
         gravity_index: 0
       };
     }
@@ -404,11 +414,11 @@ class AIService {
       });
 
       const isHealthy = response.status === 200;
-      
+
       if (isHealthy) {
         this.recordSuccess();
       }
-      
+
       return isHealthy;
     } catch (error) {
       logger.warn('AI service health check failed:', error.message);
@@ -427,6 +437,48 @@ class AIService {
       lastFailureTime: this.lastFailureTime,
       baseURL: this.baseURL
     };
+  }
+
+  /**
+   * Generate an interview question
+   * @param {Object} data - { difficulty, topic }
+   */
+  async generateInterviewQuestion(data) {
+    try {
+      const response = await this.makeRequest('/interview/generate', data);
+      return response;
+    } catch (error) {
+      logger.error('Error generating interview question:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Evaluate interview submission
+   * @param {Object} data - { code, language, questionId }
+   */
+  async evaluateInterviewSubmission(data) {
+    try {
+      const response = await this.makeRequest('/interview/evaluate', data);
+      return response;
+    } catch (error) {
+      logger.error('Error evaluating interview submission:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Chat with interviewer
+   * @param {Object} data - { message, context }
+   */
+  async chatWithInterviewer(data) {
+    try {
+      const response = await this.makeRequest('/interview/chat', data);
+      return response;
+    } catch (error) {
+      logger.error('Error in interview chat:', error);
+      throw error;
+    }
   }
 }
 

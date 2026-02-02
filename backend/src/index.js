@@ -6,7 +6,7 @@ const logger = require('./core/config/loggerConfig');
 
 async function startServer() {
   try {
-    logger.info('Starting CodeMentor AI Backend...');
+    logger.info('Starting OrbitDev AI Backend...');
 
     // Connect to MongoDB
     await database.connect();
@@ -31,17 +31,17 @@ async function startServer() {
     // Graceful shutdown handlers
     const gracefulShutdown = async (signal) => {
       logger.info(`${signal} received, shutting down gracefully...`);
-      
+
       server.close(async () => {
         logger.info('HTTP server closed');
-        
+
         try {
           await database.disconnect();
           logger.info('MongoDB disconnected');
-          
+
           await neo4jConnection.close();
           logger.info('Neo4j disconnected');
-          
+
           logger.info('Graceful shutdown completed');
           process.exit(0);
         } catch (error) {
@@ -63,11 +63,14 @@ async function startServer() {
 
     // Handle uncaught errors
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught Exception:', error);
+      console.error("RAW UNCAUGHT EXCEPTION:", error);
+      console.error("MSG:", error.message);
+      console.error("STACK:", error.stack);
       gracefulShutdown('UNCAUGHT_EXCEPTION');
     });
 
     process.on('unhandledRejection', (reason, promise) => {
+      console.error("RAW UNHANDLED REJECTION:", reason);
       logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
       if (!config.isProduction()) {
         gracefulShutdown('UNHANDLED_REJECTION');
@@ -75,6 +78,7 @@ async function startServer() {
     });
 
   } catch (error) {
+    console.error("FATAL STARTUP ERROR:", error);
     logger.error('Failed to start server:', error);
     process.exit(1);
   }

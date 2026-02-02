@@ -17,6 +17,12 @@ class ValidationError extends AppError {
   }
 }
 
+class BadRequestError extends AppError {
+  constructor(message = 'Bad Request') {
+    super(message, 400);
+  }
+}
+
 class NotFoundError extends AppError {
   constructor(resource = 'Resource') {
     super(`${resource} not found`, 404);
@@ -106,12 +112,12 @@ const errorHandler = (err, req, res, next) => {
 
 const notFoundHandler = (req, res, next) => {
 
-const ignoredPaths = ['/favicon.ico', '/.well-known'];
-  
+  const ignoredPaths = ['/favicon.ico', '/.well-known'];
+
   if (ignoredPaths.some(path => req.path.startsWith(path))) {
     return res.status(204).end();
   }
-  
+
   const error = new NotFoundError(`Route ${req.originalUrl}`);
   next(error);
 };
@@ -119,6 +125,7 @@ const ignoredPaths = ['/favicon.ico', '/.well-known'];
 module.exports = {
   AppError,
   ValidationError,
+  BadRequestError,
   NotFoundError,
   UnauthorizedError,
   ForbiddenError,

@@ -1,64 +1,100 @@
-import { Link, useNavigate } from "react-router-dom";
-import { logout, isAuthenticated } from "../../utils/auth";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/AuthContext";
+import { useState, useEffect } from "react";
+import { motion, useScroll } from "framer-motion";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const loggedIn = isAuthenticated();
+  const { isAuthenticated, logout } = useAuth();
+  const loggedIn = isAuthenticated; // Alias for existing logic
+  const { scrollY } = useScroll();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    return scrollY.on("change", (latest) => {
+      setIsScrolled(latest > 50);
+    });
+  }, [scrollY]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  const handleScroll = (id) => {
+    if (window.location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) element.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      const element = document.getElementById(id);
+      if (element) element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <header className="flex items-center justify-between border-b border-[#223049] px-4 sm:px-10 py-3">
-      {/* Logo */}
-      <div className="flex items-center gap-3 text-white">
-        <div className="size-6 text-primary">
-          {/* SVG unchanged */}
-          <svg
-            fill="currentColor"
-            viewBox="0 0 48 48"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6 text-primary"
-          >
-            <path d="M24 4c-5.13 0-9.87.72-13.39 1.94C8.75 7.06 7.2 7.83 6.1 8.76 4.97 9.72 4 11.06 4 12.76c0 .8.29 1.62.54 2.2l.06.14 17.32 27.21c.38.6 1.34.6 1.72 0L43.94 15c.02-.03.03-.06.05-.09.3-.56.56-1.35.56-2.14 0-1.7-.97-3.04-2.1-4-1.1-.93-2.65-1.7-4.51-2.32C33.87 4.72 29.13 4 24 4Z" />
-          </svg>
+    <motion.header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-[#030712]/80 backdrop-blur-xl border-b border-white/5 py-3"
+        : "bg-transparent py-5"
+        }`}
+    >
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center gap-3 text-white group cursor-pointer" onClick={() => navigate("/")}>
+          <div className="relative size-9 flex items-center justify-center">
+            <div className="absolute inset-0 bg-blue-500/20 rounded-lg blur-lg group-hover:bg-blue-500/40 transition-all" />
+            <svg
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 text-blue-400 relative z-10"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+            </svg>
+          </div>
+          <span className="text-xl font-black tracking-tight font-mono">
+            Orbit<span className="text-blue-400">Dev</span>
+          </span>
         </div>
-        <h2 className="text-lg font-bold">CodeMentor</h2>
-      </div>
 
-      {/* Desktop Navigation */}
-      <div className="hidden md:flex items-center gap-8">
-        <nav className="flex gap-8">
-          <Link to="/#features" className="text-[#90a6cb] hover:text-white">
-            Features
-          </Link>
-          <Link to="/#testimonials" className="text-[#90a6cb] hover:text-white">
-            Testimonials
-          </Link>
-          <Link to="/#pricing" className="text-[#90a6cb] hover:text-white">
-            Pricing
-          </Link>
-        </nav>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-8">
+          <nav className="flex gap-8 text-sm font-medium font-mono">
+            {['features', 'testimonials', 'pricing'].map((item) => (
+              <button
+                key={item}
+                onClick={() => handleScroll(item)}
+                className="text-gray-400 hover:text-cyan-400 transition-colors capitalize relative group"
+              >
+                {item}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all group-hover:w-full" />
+              </button>
+            ))}
+          </nav>
 
-        {/* Auth Actions */}
-        {!loggedIn ? (
-          <button
-            onClick={() => navigate("/login")}
-            className="px-4 h-10 bg-primary text-white rounded-lg font-bold hover:bg-opacity-90"
-          >
-            Sign In
-          </button>
-        ) : (
-          <button
-            onClick={handleLogout}
-            className="px-4 h-10 bg-red-600 text-white rounded-lg font-bold hover:bg-red-500"
-          >
-            Logout
-          </button>
-        )}
+          {/* Auth Actions */}
+          {!loggedIn ? (
+            <button
+              onClick={() => navigate("/login")}
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-bold transition-all backdrop-blur-sm"
+            >
+              Sign In
+            </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="px-5 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg font-bold hover:bg-red-500/20 transition-all"
+            >
+              Logout
+            </button>
+          )}
+        </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

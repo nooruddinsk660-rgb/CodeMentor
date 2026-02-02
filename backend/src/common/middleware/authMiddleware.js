@@ -12,8 +12,8 @@ class JWTService {
     try {
       const options = {
         expiresIn: expiresIn || this.expiresIn,
-        issuer: 'codementor-ai',
-        audience: 'codementor-users'
+        issuer: 'orbitdev-ai',
+        audience: 'orbitdev-users'
       };
 
       const token = jwt.sign(payload, this.secret, options);
@@ -27,8 +27,8 @@ class JWTService {
   verifyToken(token) {
     try {
       const decoded = jwt.verify(token, this.secret, {
-        issuer: 'codementor-ai',
-        audience: 'codementor-users'
+        issuer: 'orbitdev-ai',
+        audience: 'orbitdev-users'
       });
       return { valid: true, decoded };
     } catch (error) {
@@ -57,7 +57,7 @@ class JWTService {
   refreshToken(token) {
     try {
       const { valid, decoded } = this.verifyToken(token);
-      
+
       if (!valid) {
         throw new Error('Cannot refresh invalid token');
       }
@@ -129,7 +129,7 @@ const optionalAuth = (req, res, next) => {
         req.user = decoded;
       }
     }
-    
+
     next();
   } catch (error) {
     logger.error('Optional auth middleware error:', error);

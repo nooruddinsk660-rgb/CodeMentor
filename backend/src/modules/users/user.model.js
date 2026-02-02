@@ -18,16 +18,16 @@ const skillSchema = new mongoose.Schema({
       name: { type: String, required: true },
       level: { type: String, required: true },
       // ADD THIS:
-      gravityScore: { type: Number, default: 0 }, 
+      gravityScore: { type: Number, default: 0 },
       lastUsed: { type: Date, default: Date.now }
     }
   ],
-  
+
   /* --- ADD THESE NEW FIELDS --- */
   logo: {
     type: String,
     // THE MAGIC: Auto-generate logo URL if missing
-    default: function() {
+    default: function () {
       if (!this.name) return '';
       // cleans name (e.g. "React.js" -> "react") and builds URL
       return `https://cdn.simpleicons.org/${this.name.replace(/\s|\.|js|script/gi, '').toLowerCase()}`;
@@ -52,16 +52,16 @@ const skillSchema = new mongoose.Schema({
     type: Number,
     default: 0
   }
-}, { 
-  _id: true, 
+}, {
+  _id: true,
   /* IMPORTANT: Enable virtuals so 'intensity' is sent to frontend */
-  toJSON: { virtuals: true }, 
-  toObject: { virtuals: true } 
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 /* --- ADD THIS VIRTUAL PROPERTY --- */
 // Automatically converts text proficiency to numbers for the progress bar
-skillSchema.virtual('intensity').get(function() {
+skillSchema.virtual('intensity').get(function () {
   const scores = {
     beginner: 30,
     intermediate: 60,
@@ -87,6 +87,19 @@ const githubDataSchema = new mongoose.Schema({
     language: String,
     percentage: Number,
     linesOfCode: Number
+  }],
+  // Added for detailed analysis persistence
+  languageStats: {
+    type: Map,
+    of: Number,
+    default: {}
+  },
+  recentRepos: [{
+    name: String,
+    desc: String,
+    lang: String,
+    url: String,
+    updatedAt: Date
   }],
   recentActivity: {
     commits: Number,
@@ -118,7 +131,25 @@ const matchHistorySchema = new mongoose.Schema({
   feedback: String
 }, { _id: false });
 
+/* Mission Persistence for AI Career Navigator */
+/* Mission Persistence for AI Career Navigator */
+const missionSchema = new mongoose.Schema({
+  mission_id: { type: String }, // Links to Roadmap Step ID
+  title: { type: String, required: true },
+  description: String,
+  status: {
+    type: String,
+    enum: ['active', 'completed', 'abandoned'],
+    default: 'active'
+  },
+  progress: { type: Number, default: 0 }, // 0-100
+  xp_earned: { type: Number, default: 0 },
+  startedAt: { type: Date, default: Date.now },
+  completedAt: Date
+});
+
 const userSchema = new mongoose.Schema({
+  // ... existing fields ...
   username: {
     type: String,
     required: true,
@@ -152,30 +183,35 @@ const userSchema = new mongoose.Schema({
   fullName: String,
   bio: String,
   avatar: String,
-  
+  title: String,
+  location: String,
+
   skills: [skillSchema],
-  
+
   githubData: githubDataSchema,
-  
+
   skillEmbedding: {
     type: [Number],
     default: []
   },
-  
+
   xp: {
     type: Number,
     default: 0,
     min: 0
   },
-  
+
   level: {
     type: Number,
     default: 1,
     min: 1
   },
-  
+
   matchHistory: [matchHistorySchema],
-  
+
+  gravity_index: { type: Number, default: 0 },
+  missions: [missionSchema],
+
   preferences: {
     learningGoals: [String],
     availableHours: Number,
@@ -183,7 +219,7 @@ const userSchema = new mongoose.Schema({
     preferredLanguages: [String],
     interests: [String]
   },
-  
+
   statistics: {
     totalMatches: {
       type: Number,
@@ -203,7 +239,7 @@ const userSchema = new mongoose.Schema({
     }
   },
 
-   activityLog: [
+  activityLog: [
     {
       date: {
         type: Date,
@@ -213,29 +249,29 @@ const userSchema = new mongoose.Schema({
   ],
 
   dailyLog: {
-    lastQuestDate: { 
-      type: Date, 
-      default: null 
+    lastQuestDate: {
+      type: Date,
+      default: null
     },
 
-    currentStreak: { 
-      type: Number, 
-      default: 0 
+    currentStreak: {
+      type: Number,
+      default: 0
     }
   },
-  
-  isActive: { 
-    type: Boolean, 
-    default: true 
+
+  isActive: {
+    type: Boolean,
+    default: true
   },
-  
+
   isVerified: {
     type: Boolean,
     default: false
   },
-  
+
   lastLogin: Date,
-  
+
   settings: {
     emailNotifications: {
       type: Boolean,
@@ -264,44 +300,44 @@ userSchema.index({ createdAt: -1 });
 userSchema.index({ isActive: 1, isVerified: 1 });
 
 // Virtual for skill count
-userSchema.virtual('skillCount').get(function() {
+userSchema.virtual('skillCount').get(function () {
   return this.skills ? this.skills.length : 0;
 });
 
 // Calculate level based on XP
-userSchema.methods.calculateLevel = function() {
+userSchema.methods.calculateLevel = function () {
   // Level formula: sqrt(xp / 100)
   this.level = Math.floor(Math.sqrt(this.xp / 100)) + 1;
   return this.level;
 };
 
 // Add XP and recalculate level
-userSchema.methods.addXP = function(amount) {
+userSchema.methods.addXP = function (amount) {
   this.xp += amount;
   this.calculateLevel();
   return this.xp;
 };
 
 // Check if user has a specific skill
-userSchema.methods.hasSkill = function(skillName) {
-  return this.skills.some(skill => 
+userSchema.methods.hasSkill = function (skillName) {
+  return this.skills.some(skill =>
     skill.name.toLowerCase() === skillName.toLowerCase()
   );
 };
 
 // Get skills by category
-userSchema.methods.getSkillsByCategory = function(category) {
+userSchema.methods.getSkillsByCategory = function (category) {
   return this.skills.filter(skill => skill.category === category);
 };
 
 // Update last login
-userSchema.methods.updateLastLogin = function() {
+userSchema.methods.updateLastLogin = function () {
   this.lastLogin = new Date();
   return this.save();
 };
 
 // Pre-save middleware
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   if (this.isModified('xp')) {
     this.calculateLevel();
   }
@@ -309,7 +345,7 @@ userSchema.pre('save', function(next) {
 });
 
 // Remove sensitive data from JSON output
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
   delete obj.githubAccessToken;

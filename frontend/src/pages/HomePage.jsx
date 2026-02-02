@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate } from "react-router-dom"; 
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 import Navbar from "../components/hompage/Navbar";
@@ -21,8 +21,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="bg-background-dark min-h-screen font-display">
-      <Navbar />
+    <div className="bg-background-dark min-h-screen font-display relative z-0">
+      <div className="relative z-50">
+        <Navbar />
+      </div>
       <Hero />
       <Features />
       <Testimonials />

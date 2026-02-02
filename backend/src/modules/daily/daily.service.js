@@ -57,44 +57,82 @@ class DailyService {
   }
 
   // --- 🧠 THE "PROCEDURAL BRAIN" ---
+  // --- 🧠 THE "GOD MODE" BRAIN (REPLACEMENT) ---
   generateSmartContent(user, trend) {
     const userSkills = user.skills || [];
-    const mainSkill = userSkills[0]?.name || 'Code';
+
+    // 1. CRITICAL: GRAVITY CHECK (Skill Decay)
+    // We look for 'expert' or 'advanced' skills with low gravity (< 0.6)
+    // This forces the user to maintain what they have learned.
+    const decayingSkill = userSkills.find(s => 
+        (s.proficiency === 'expert' || s.proficiency === 'advanced') && 
+        (s.gravityScore || 1) < 0.6 // Default to 1 if no score yet
+    );
+
+    if (decayingSkill) {
+        return {
+            isDirective: true, // Frontend uses this to trigger "Red Alert" UI
+            quest: {
+                type: 'urgent',
+                title: `Emergency: Save your ${decayingSkill.name} Rating`,
+                desc: `System detected 40% gravity loss in ${decayingSkill.name}. Your expert status is at risk. Solve 1 complex problem to restore orbit.`,
+                link: `/practice/${decayingSkill.name.toLowerCase()}`, 
+                discussion: `https://stackoverflow.com/questions/tagged/${decayingSkill.name.toLowerCase()}?sort=Votes`,
+                priority: 'critical', // Signals red UI
+                xpReward: 500 // High reward
+            },
+            tip: "Maintenance is harder than growth. Don't let your hard work rust."
+        };
+    }
+
+    // 2. GROWTH: PUSH TO NEXT LEVEL
+    // Look for skills close to leveling up (gravity > 0.8)
+    const nextLevelSkill = userSkills.find(s => 
+        (s.gravityScore || 0) > 0.8 && s.proficiency !== 'expert'
+    );
     
-    // --- 1. IF WE HAVE A LIVE TREND ---
+    if (nextLevelSkill) {
+        return {
+            isDirective: true,
+            quest: {
+                type: 'growth',
+                title: `Push ${nextLevelSkill.name} to Expert`,
+                desc: `You are at 80% gravity. One solid coding session today will trigger a level-up event.`,
+                link: `/practice/${nextLevelSkill.name.toLowerCase()}`,
+                discussion: `https://github.com/topics/${nextLevelSkill.name.toLowerCase()}`,
+                priority: 'high', // Signals Blue/Gold UI
+                xpReward: 300
+            },
+            tip: "Consistency is the only algorithm that matters."
+        };
+    }
+
+    // 3. FALLBACK: USE THE TREND ENGINE (Existing Logic)
+    // If user is balanced, we fall back to the generic trend logic you already had.
     if (trend) {
       const isRelevant = trend.tags.some(tag => 
         userSkills.some(s => s.name.toLowerCase().includes(tag.toLowerCase()))
       );
-
       const discussionLink = `https://dev.to/search?q=${encodeURIComponent(trend.title)}`;
 
-      if (isRelevant) {
-        return {
-          quest: {
-            type: 'learning',
-            title: 'Trend Surfer',
-            desc: `The tech world is talking about "${trend.title}". Since you know ${mainSkill}, read this article and write down one takeaway.`,
-            link: trend.url,          
-            discussion: discussionLink 
-          },
-          tip: `Industry Insight: Keeping up with trends like "${trend.tags[0]}" makes you 2x more valuable in interviews.`
-        };
-      } 
-      
       return {
+        isDirective: false, // Standard UI
         quest: {
-          type: 'social',
-          title: 'News Breaker',
-          desc: `Top story today: "${trend.title}". Share this in a developer discord or read the first 3 paragraphs.`,
-          link: trend.url,
-          discussion: discussionLink
+          type: 'learning',
+          title: isRelevant ? 'Trend Surfer' : 'News Breaker',
+          desc: isRelevant 
+            ? `The industry is focused on "${trend.title}". Since you know ${userSkills[0]?.name}, read this.`
+            : `Top story: "${trend.title}". Read the first 3 paragraphs to stay current.`,
+          link: trend.url,          
+          discussion: discussionLink,
+          priority: 'normal',
+          xpReward: 100
         },
-        tip: `Growth Hack: Even if you don't use ${trend.tags[0] || 'it'}, knowing what it solves is crucial.`
+        tip: `Industry Insight: Knowing about "${trend.tags[0]}" makes you job-ready.`
       };
     }
 
-    // --- 2. FALLBACK ---
+    // 4. FINAL RESORT: STATIC CONTENT
     return this.getStaticFallback(user);
   }
 

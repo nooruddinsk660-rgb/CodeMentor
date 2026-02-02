@@ -12,22 +12,83 @@ class MatchService {
    */
   async findMatches(userId, options = {}) {
     try {
-      const { limit = 10, minScore = 0.4 } = options;
+      const { limit = 10, minScore = 0.4, mode = 'project' } = options;
 
       // 1. Get Current User
       const currentUser = await User.findById(userId).lean();
       if (!currentUser) throw new NotFoundError('User');
 
       if (!currentUser.skills || currentUser.skills.length === 0) {
-        return []; 
+        return [];
       }
 
       // 2. STAGE 1: Graph Filtering (Neo4j)
-      // Get 3x candidates to allow re-ranking
-      const graphCandidates = await skillGraphService.findComplementaryUsers(userId, limit * 3);
-      
-      if (!graphCandidates.length) {
-        logger.info(`No graph candidates found for ${userId}`);
+      let graphCandidates = [];
+      const searchLimit = limit * 3;
+
+      switch (mode) {
+        case 'mentorship':
+          // Find experts in my field
+          graphCandidates = await skillGraphService.findMentors(userId, searchLimit);
+          break;
+        case 'peer':
+          // Find similar skillsets
+          graphCandidates = await skillGraphService.findSimilarUsers(userId, searchLimit);
+          break;
+        case 'project':
+        default:
+          // Find complementary skills (Frontend <-> Backend)
+          graphCandidates = await skillGraphService.findComplementaryUsers(userId, searchLimit);
+          break;
+      }
+
+      // Fallback: If no graph matches, try standard complementary search if not already tried
+      if ((!graphCandidates || !graphCandidates.length) && mode !== 'project') {
+        graphCandidates = await skillGraphService.findComplementaryUsers(userId, searchLimit);
+      }
+
+      // 3. Fallback: If graph candidates are insufficient, query MongoDB directly
+      if (graphCandidates.length < limit) {
+        logger.info(`Graph candidates insufficient (${graphCandidates.length}/${limit}). engaging MongoDB fallback for mode: ${mode}`);
+
+        const existingIds = graphCandidates.map(c => c.userId);
+        existingIds.push(userId); // Exclude self
+
+        let fallbackUsers = [];
+
+        if (mode === 'project') {
+          // Find users with ANY skills (simple fallback for complementary)
+          fallbackUsers = await User.find({
+            _id: { $nin: existingIds },
+            isActive: true,
+            skills: { $exists: true, $not: { $size: 0 } }
+          })
+            .limit(limit * 2)
+            .lean();
+        } else {
+          // Find users with overlapping skills
+          const mySkills = currentUser.skills.map(s => typeof s === 'string' ? s : s.name);
+          fallbackUsers = await User.find({
+            _id: { $nin: existingIds },
+            isActive: true,
+            'skills.name': { $in: mySkills }
+          })
+            .limit(limit * 2)
+            .lean();
+        }
+
+        // Map fallback users to "graph candidate" format
+        const fallbackCandidates = fallbackUsers.map(u => ({
+          userId: u._id.toString(),
+          complementarySkills: [], // We don't calculate this in simple fallback
+          commonSkills: []
+        }));
+
+        graphCandidates = [...graphCandidates, ...fallbackCandidates];
+      }
+
+      if (!graphCandidates || !graphCandidates.length) {
+        logger.info(`No matches found even after fallback for ${userId}`);
         return [];
       }
 
@@ -43,12 +104,12 @@ class MatchService {
       // 4. STAGE 2: Math Scoring
       const scoredMatches = graphCandidates.map(graphMatch => {
         const fullCandidate = candidateMap.get(graphMatch.userId);
-        
+
         if (!fullCandidate) return null;
 
         // Skip already matched
         const alreadyInteracted = currentUser.matchHistory?.some(
-            h => h.matchedUserId.toString() === fullCandidate._id.toString()
+          h => h.matchedUserId.toString() === fullCandidate._id.toString()
         );
         if (alreadyInteracted) return null;
 
@@ -68,9 +129,10 @@ class MatchService {
           },
           score: matchResult.score,
           breakdown: matchResult.breakdown,
-          complementarySkills: graphMatch.complementarySkills || [], 
+          complementarySkills: graphMatch.complementarySkills || [],
           commonSkills: graphMatch.commonSkills || [],
-          matchLabel: this.getMatchLabel(matchResult.score)
+          matchLabel: this.getMatchLabel(matchResult.score),
+          matchScore: Math.round(matchResult.score * 100) // Frontend expects 0-100
         };
       });
 
@@ -133,7 +195,7 @@ class MatchService {
 
       // NOTE: In a real app, you would also push a notification or 
       // a "pending received" record to the `toUser`. 
-      
+
       return { success: true, matchData };
 
     } catch (error) {
@@ -173,7 +235,7 @@ class MatchService {
       if (!user) throw new NotFoundError('User');
 
       const history = user.matchHistory || [];
-      
+
       return {
         total: history.length,
         pending: history.filter(m => m.status === 'pending').length,

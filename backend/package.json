@@ -1,5 +1,5 @@
 {
-  "name": "codementor-ai-backend",
+  "name": "orbitdev-ai-backend",
   "version": "1.0.0",
   "description": "AI-driven peer-learning and mentorship platform backend",
   "main": "src/index.js",
@@ -14,13 +14,20 @@
     "lint:fix": "eslint src/**/*.js --fix",
     "format": "prettier --write \"src/**/*.js\"",
     "security:audit": "npm audit --audit-level=moderate",
-    "docker:build": "docker build -t codementor-ai-backend .",
+    "docker:build": "docker build -t orbitdev-ai-backend .",
     "docker:run": "docker-compose up",
     "migrate": "node scripts/migrate.js",
-    "logs": "pm2 logs codementor-ai"
+    "logs": "pm2 logs orbitdev-ai"
   },
-  "keywords": ["ai", "mentorship", "github", "graphql", "nodejs", "neo4j"],
-  "author": "CodeMentor AI Team",
+  "keywords": [
+    "ai",
+    "mentorship",
+    "github",
+    "graphql",
+    "nodejs",
+    "neo4j"
+  ],
+  "author": "OrbitDev AI Team",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",
@@ -66,7 +73,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "coveragePathIgnorePatterns": ["/node_modules/"],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
     "testTimeout": 30000,
     "collectCoverageFrom": [
       "src/**/*.js",
@@ -75,9 +84,14 @@
     ]
   },
   "nodemonConfig": {
-    "watch": ["src"],
+    "watch": [
+      "src"
+    ],
     "ext": "js,json",
-    "ignore": ["src/**/*.test.js", "node_modules"],
+    "ignore": [
+      "src/**/*.test.js",
+      "node_modules"
+    ],
     "delay": 1000
   }
 }

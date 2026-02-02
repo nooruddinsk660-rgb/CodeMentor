@@ -13,6 +13,21 @@ from contextlib import asynccontextmanager
 from modules.embedding_generator import EmbeddingGenerator
 from modules.github_analysis import GitHubAnalyzer
 import numpy as np
+import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from backend/.env
+# app.py is in backend/ai-service/, so .env is in ../
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+from dotenv import load_dotenv
+
+# Load environment variables from backend/.env
+# app.py is in backend/ai-service/, so .env is in ../
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 
 # ===== LOGGING CONFIGURATION =====
 logging.basicConfig(
@@ -62,7 +77,7 @@ async def lifespan(app: FastAPI):
 
 # ===== FASTAPI APP INITIALIZATION =====
 app = FastAPI(
-    title="CodeMentor AI Service",
+    title="OrbitDev AI Service",
     description="AI-powered skill analysis and matching service with enhanced security",
     version="1.1.0",
     lifespan=lifespan,
@@ -204,6 +219,7 @@ class TrajectoryResponse(BaseModel):
     status: str
     trajectory: str
     drift_warnings: List[str]
+    roadmap: List[str]
     ai_analysis: str
     gravity_index: float
     processing_time: float
@@ -253,7 +269,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 async def root():
     """Root endpoint with service information"""
     return {
-        "message": "CodeMentor AI Service",
+        "message": "OrbitDev AI Service",
         "version": "1.1.0",
         "status": "operational",
         "endpoints": {
@@ -539,41 +555,99 @@ async def analyze_trajectory(request: TrajectoryRequest):
     """
     start = time.time()
     try:
-        logger.info(f"Analyzing trajectory for {len(request.skills)} skills")
+        logger.info(f"Analyzing trajectory for {len(request.skills)} skills towards {request.target_role}")
         
         drift_warnings = []
         trajectory_status = "stable"
         total_gravity = 0
-        
-        # 1. Analyze Physics of each skill
+        current_skills_map = {} # Normalize input skills
+
+        # 1. Analyze Physics & Detect Drift
         for skill in request.skills:
-            # Map text levels to numbers for comparison
+            # Normalize level
             level_map = {"beginner": 0.3, "intermediate": 0.6, "advanced": 0.85, "expert": 1.0}
-            # Handle case-insensitive matching
             proficiency = level_map.get(skill.level.lower(), 0.1)
             
-            # Accumulate system gravity
+            # Map for later comparison
+            current_skills_map[skill.name.lower()] = proficiency
+            
+            # Accumulate gravity
             total_gravity += skill.gravityScore
             
-            # CRITICAL LOGIC: Detect Decay
-            # If proficiency is high (Expert) but gravity is low (Inactive), that is a Drift.
-            if proficiency >= 0.8 and skill.gravityScore < 0.6:
+            # Decay Logic
+            if proficiency >= 0.8 and skill.gravityScore < 0.3:
                 drift_warnings.append(
                     f"⚠️ High Decay in {skill.name}: You are an {skill.level}, but your activity is low."
                 )
                 trajectory_status = "drifting"
 
-        # 2. Generate Insight
+        # 2. Define Role Requirements (The "Galaxy Map")
+        role_galaxy = {
+            "Senior Full Stack Engineer": {
+                "required": ["javascript", "react", "nodejs", "typescript", "system-design", "docker", "testing"],
+                "optional": ["graphql", "aws", "nextjs"]
+            },
+            "AI & Machine Learning Engineer": {
+                "required": ["python", "pytorch", "tensorflow", "mathematics", "pandas", "data-structures"],
+                "optional": ["nlp", "computer-vision", "mlops", "docker"]
+            },
+            "DevOps & Cloud Architect": {
+                "required": ["docker", "kubernetes", "aws", "terraform", "ci-cd", "linux", "networking"],
+                "optional": ["go", "python", "monitoring", "security"]
+            },
+            "Blockchain Developer": {
+                "required": ["solidity", "ethereum", "javascript", "cryptography", "smart-contracts", "web3"],
+                "optional": ["rust", "go", "defi"]
+            },
+            "Frontend Architect": {
+                "required": ["javascript", "react", "css-architecture", "performance", "accessibility", "typescript"],
+                "optional": ["web-components", "design-systems", "figma"]
+            },
+            "Backend Systems Engineer": {
+                "required": ["java", "go", "database-design", "microservices", "redis", "kafka", "system-design"],
+                "optional": ["nodejs", "rust", "grpc"]
+            },
+            "Data Scientist": {
+                "required": ["python", "sql", "statistics", "pandas", "visualization", "machine-learning"],
+                "optional": ["r", "big-data", "spark"]
+            }
+        }
+
+        # 3. Generate Roadmap
+        target_role_key = request.target_role or "Senior Full Stack Engineer"
+        # Fuzzy match or default
+        target_role_data = role_galaxy.get(target_role_key, role_galaxy["Senior Full Stack Engineer"])
+        
+        roadmap_steps = []
+        
+        # Check Required Skills
+        for req_skill in target_role_data["required"]:
+            user_proficiency = current_skills_map.get(req_skill, 0)
+            if user_proficiency < 0.6: # Less than intermediate
+                step_type = "Learn" if user_proficiency == 0 else "Improve"
+                roadmap_steps.append(f"{step_type} {req_skill.title()} to build a strong foundation.")
+        
+        # Check Optional/Advanced
+        if len(roadmap_steps) < 3: # If core is good, suggest advanced
+            for opt_skill in target_role_data["optional"]:
+                if opt_skill not in current_skills_map:
+                    roadmap_steps.append(f"Expand into {opt_skill.title()} to increase seniority.")
+
+        # Cap roadmap
+        roadmap_steps = roadmap_steps[:5] 
+        if not roadmap_steps:
+             roadmap_steps.append("You are fully qualified! Focus on leadership and mentoring.")
+
+        # 4. Generate Insight
         if trajectory_status == "drifting":
-            analysis = (
-                f"Drift Detected. {len(drift_warnings)} core skills are decaying. "
-                "Your expertise is becoming theoretical. Recommended: Build a small project this weekend."
-            )
-        elif total_gravity > (len(request.skills) * 0.7):
-            analysis = "Excellent Momentum. Your gravity is high, indicating consistent daily learning."
-            trajectory_status = "accelerating"
+            analysis = f"Drift Detected. {len(drift_warnings)} skills are decaying. Stabilize your core before expanding."
+        elif not roadmap_steps or roadmap_steps[0].startswith("You are full"):
+             analysis = "Orbit Achieved. You match the profile for this role."
+             trajectory_status = "stable"
         else:
-            analysis = "Stable but static. To reach Senior level, increase daily commit frequency."
+             analysis = f"Gap Analysis Complete. {len(roadmap_steps)} key milestones identified for {target_role_key}."
+             if total_gravity > (len(request.skills) * 0.5):
+                 trajectory_status = "accelerating"
 
         processing_time = time.time() - start
 
@@ -581,6 +655,7 @@ async def analyze_trajectory(request: TrajectoryRequest):
             status="success",
             trajectory=trajectory_status,
             drift_warnings=drift_warnings,
+            roadmap=roadmap_steps, # NEW FIELD
             ai_analysis=analysis,
             gravity_index=round(total_gravity / max(len(request.skills), 1), 2),
             processing_time=processing_time
@@ -592,6 +667,264 @@ async def analyze_trajectory(request: TrajectoryRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Trajectory analysis failed: {str(e)}"
         )
+
+# ... (Existing imports)
+import ast
+import json
+import uuid
+
+# ===== INTERVIEW MODULE =====
+
+class InterviewManager:
+    def __init__(self):
+        self.question_bank = {
+            "easy": [
+                {"id": "e1", "title": "Reverse String", "description": "Write a function to reverse a string.", "template": "def reverse_string(s):\n    pass", "test_case": "reverse_string('hello') == 'olleh'"},
+                {"id": "e2", "title": "FizzBuzz", "description": "Print numbers 1 to n. Print 'Fizz' for multiples of 3, 'Buzz' for 5.", "template": "def fizzbuzz(n):\n    pass", "test_case": "True"}
+            ],
+            "medium": [
+                {"id": "m1", "title": "Reverse Linked List", "description": "Reverse a singly linked list.", "template": "class ListNode:\n    def __init__(self, val=0, next=None):\n        self.val = val\n        self.next = next\n\ndef reverse_list(head):\n    pass", "test_case": "pass"},
+                {"id": "m2", "title": "Two Sum", "description": "Find indices of two numbers that add up to target.", "template": "def two_sum(nums, target):\n    pass", "test_case": "pass"}
+            ],
+            "hard": [
+                {"id": "h1", "title": "Merge k Sorted Lists", "description": "Merge k linked lists into one sorted list.", "template": "def merge_k_lists(lists):\n    pass", "test_case": "pass"},
+                {"id": "h2", "title": "Trapping Rain Water", "description": "Compute how much water it can trap after raining.", "template": "def trap(height):\n    pass", "test_case": "pass"}
+            ],
+            # Expanded Fallback Pool
+            "medium": [
+                {"id": "m1", "title": "Reverse Linked List", "description": "Reverse a singly linked list.", "template": "class ListNode:\n    def __init__(self, val=0, next=None):\n        self.val = val\n        self.next = next\n\ndef reverse_list(head):\n    pass", "test_case": "pass"},
+                {"id": "m2", "title": "Two Sum", "description": "Find indices of two numbers that add up to target.", "template": "def two_sum(nums, target):\n    pass", "test_case": "pass"},
+                {"id": "m3", "title": "Longest Substring Without Repeating Characters", "description": "Find string length.", "template": "def length_of_longest_substring(s):\n    pass", "test_case": "pass"},
+                {"id": "m4", "title": "Container With Most Water", "description": "Find max area.", "template": "def max_area(height):\n    pass", "test_case": "pass"}
+            ]
+        }
+
+    def generate_ai_question(self, difficulty="medium", topic="dsa", model=None):
+        if not model:
+            return None
+            
+        try:
+            import re
+            prompt = (
+                f"Generate a unique {difficulty} difficulty coding interview question about {topic}. "
+                f"Output strictly valid JSON. "
+                f"Format: {{'title': '...', 'description': '...', 'template': 'python code template...', 'test_case': 'assertion code'}}"
+            )
+            response = model.generate_content(prompt)
+            text = response.text
+            # Robust JSON extraction using regex
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                text = match.group(0)
+            
+            data = json.loads(text)
+            data['id'] = str(uuid.uuid4())
+            return data
+        except Exception as e:
+            logger.error(f"AI Question Gen Failed: {e}")
+            return None
+
+    def get_question(self, difficulty="medium", topic="dsa"):
+        import random
+        
+        # Try AI Generation first if available
+        # We access the global persona manager to see if LLM is active
+        try:
+            from __main__ import persona
+            if hasattr(persona, 'use_llm') and persona.use_llm:
+                 q = self.generate_ai_question(difficulty, topic, persona.model)
+                 if q:
+                     return q
+        except ImportError:
+            # Fallback if circular import or context issue
+            pass
+
+        # Fallback to static bank
+        pool = self.question_bank.get(difficulty.lower(), self.question_bank["medium"])
+        question = random.choice(pool)
+        return question
+
+    def evaluate_submission(self, code, language="python"):
+        """
+        Performs static analysis on the code.
+        """
+        try:
+            tree = ast.parse(code)
+            
+            # Simple Heuristics
+            has_loop = any(isinstance(node, (ast.For, ast.While)) for node in ast.walk(tree))
+            
+            analysis = "Syntax is valid. "
+            if has_loop:
+                analysis += "Iterative approach detected. Good for memory efficiency. "
+            else:
+                analysis += "No explicit loops found. "
+            
+            return {
+                "status": "accepted",
+                "feedback": analysis + "Code structure looks solid based on static analysis.",
+                "xp": 0 # XP is assigned by the Controller based on difficulty now
+            }
+        except SyntaxError as e:
+            return {
+                "status": "error",
+                "feedback": f"Syntax Error on line {e.lineno}: {e.msg}",
+                "xp": 0
+            }
+        except Exception as e:
+             return {
+                "status": "error",
+                "feedback": f"Analysis Failed: {str(e)}",
+                "xp": 0
+            }
+
+interview_manager = InterviewManager()
+
+class InterviewRequest(BaseModel):
+    difficulty: str = "medium"
+    topic: str = "dsa"
+
+class EvaluationRequest(BaseModel):
+    code: str
+    language: str = "python"
+    questionId: str
+
+@app.post("/interview/generate")
+async def generate_interview_question(request: InterviewRequest):
+    q = interview_manager.get_question(request.difficulty, request.topic)
+    return {
+        "question": q,
+        "message": f"I have retrieved a {request.difficulty} problem from the archives. {q['title']}. {q['description']}"
+    }
+
+@app.post("/interview/evaluate")
+async def evaluate_interview_submission(request: EvaluationRequest):
+    result = interview_manager.evaluate_submission(request.code, request.language)
+    return result
+
+class ChatRequest(BaseModel):
+    message: str
+    context: Optional[str] = None
+
+# ===== PERSONA LOGIC =====
+
+class PersonaManager:
+    def __init__(self):
+        self.name = "Noor"
+        self.role = "AI Sentinel & Mentor"
+        self.use_llm = False
+        
+        # Configure Gemini if key exists
+        api_key = os.getenv("GEMINI_API_KEY")
+        self.last_error_time = 0
+        self.COOLDOWN_SECONDS = 300  # 5 Minutes Cooldown on Error
+        
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                self.model = genai.GenerativeModel('gemini-pro')
+                self.use_llm = True
+                logger.info("✅ Gemini AI Integration Active (strict free-tier mode)")
+            except Exception as e:
+                logger.error(f"Gemini Config Error: {e}")
+        else:
+            logger.warning("⚠️ No GEMINI_API_KEY found. Falling back to Rule-Based Persona.")
+
+    def process_message(self, message: str, context: Optional[str] = None) -> str:
+        msg = message.lower().strip()
+        
+        # 0. LLM Path (Real AI) - WITH STRICT CIRCUIT BREAKER
+        # If we hit a limit recently, enforce a strict cooldown to prevent any "extra extraction"
+        if self.use_llm:
+            time_since_error = time.time() - self.last_error_time
+            if time_since_error < self.COOLDOWN_SECONDS:
+                 logger.warning(f"❄️ Circuit Breaker Active. Skipping LLM for {int(self.COOLDOWN_SECONDS - time_since_error)}s.")
+                 # Fall through to Rule-Based Logic below automatically
+            else:
+                try:
+                    system_prompt = (
+                        f"You are Noor, an advanced AI Sentinel and Coding Mentor. "
+                        f"Your Tone: Futuristic, Professional, Encouraging, slightly Sci-Fi (Cyberpunk). "
+                        f"Context: The user is in an Interview Arena solving: '{context or 'a coding problem'}'. "
+                        f"Rules: "
+                        f"1. NEVER write the full solution code. "
+                        f"2. Guide them with logic, pseudocode, or hints. "
+                        f"3. Be concise. "
+                        f"4. If the user says 'yes' or 'ready' to a success message, congratulate them and tell them to click the 'Next Challenge' button. "
+                        f"5. If they ask 'how to do task', explain the algorithmic approach to '{context}' without giving code. "
+                        f"6. If they ask to solve it, refuse politely citing 'Protocol Violation' and give a hint instead. "
+                        f"User Message: {message}"
+                    )
+                    response = self.model.generate_content(system_prompt)
+                    return response.text
+                    
+                except ResourceExhausted:
+                    logger.warning("⚠️ Gemini Free Tier Limit Hit. Engaging 5-minute Circuit Breaker.")
+                    self.last_error_time = time.time() # STOP requests for 5 minutes
+                    # Fallback to rule-based logic
+                    
+                except Exception as e:
+                    logger.error(f"Gemini Gen Error: {e}")
+                    # Fallthrough to rule-based on error
+        
+        # 1. Direct Solution Requests (Cheating Prevention)
+        if any(w in msg for w in ["solve", "answer", "code for me", "give me the code", "do it"]):
+            return (
+                f"⚠️ **PROTOCOL VIOLATION**: I cannot write the solution for you.\n\n"
+                f"However, I can guide you. Break the problem '{context or 'current task'}' into smaller steps.\n"
+                f"Try writing the pseudocode first. I am watching."
+            )
+
+        # 2. Greetings & Status
+        if any(w in msg for w in ["hi", "hello", "hey", "start", "ready", "yes", "next"]):
+            return (
+                f"🔵 **ACKNOWLEDGMENT RECEIVED**.\n"
+                f"If you have completed the objective, click **NEXT CHALLENGE** to proceed.\n"
+                f"If you require assistance with '{context or 'the current protocol'}', ask for a **HINT**."
+            )
+
+        # 3. Help & Hints
+        if any(w in msg for w in ["help", "hint", "stuck", "clue", "guide", "how"]):
+            return (
+                f"💡 **GUIDANCE PROTOCOL**.\n"
+                f"To solve '{context or 'this problem'}':\n"
+                f"1. Analyze the inputs and expected outputs.\n"
+                f"2. Break it down. Do you need a loop? A hash map?\n"
+                f"3. Write pseudocode in comments before coding."
+            )
+            
+        # 4. Gratitude
+        if any(w in msg for w in ["thank", "thanks", "good"]):
+            return "✅ **AFFIRMATIVE**.\nProceed with your implementation."
+
+        # 5. Frustration/Confusion
+        if any(w in msg for w in ["hard", "difficult", "fail", "error", "why"]):
+            return (
+                f"⚖️ **DIAGNOSTIC**.\n"
+                f"Frustration is part of the learning algorithm. \n"
+                f"Take a breath. Read the error message carefully. What is the compiler telling you?"
+            )
+
+        # Default Fallback (Sci-Fi Flavor)
+        return (
+            f"📨 **INPUT RECEIVED**: '{message}'\n"
+            f"I am standing by. Request a **HINT** if you are stuck, or **EXECUTE** your code to verify."
+        )
+
+persona = PersonaManager()
+
+@app.post("/interview/chat")
+# force reload
+async def chat_with_interviewer(request: ChatRequest):
+    """
+    Enhanced chat with Hybrid Logic (Gemini LLM + Rule-Based Fallback)
+    """
+    try:
+        reply = persona.process_message(request.message, request.context)
+        return {"reply": reply}
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        return {"reply": "⚠️ **SYSTEM ERROR**: Neural Link Unstable. Please retry."}
 
 # ===== MAIN ENTRY POINT =====
 if __name__ == "__main__":

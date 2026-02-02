@@ -33,12 +33,12 @@ passport.use(
 
         // Robust email extraction (GitHub profile.emails can be empty if private)
         let email = profile.emails && profile.emails[0]?.value;
-        
+
         if (!email) {
-           // Fallback: This user might not have a public email. 
-           // In production, you might want to fetch it using the accessToken from the /user/emails endpoint.
-           // For now, we generate a placeholder to prevent schema validation errors.
-           email = `${profile.username}@github.codementor.io`;
+          // Fallback: This user might not have a public email. 
+          // In production, you might want to fetch it using the accessToken from the /user/emails endpoint.
+          // For now, we generate a placeholder to prevent schema validation errors.
+          email = `${profile.username}@github.orbitdev.io`;
         }
 
         // 1. Check if user exists by GitHub ID

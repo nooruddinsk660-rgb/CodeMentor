@@ -1,219 +1,299 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // <--- 1. Import Navigation
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { getRecommendedMatches, requestConnection } from "../../services/match.service";
 import { useAuth } from "../../auth/AuthContext";
+
+// --- CONSTANTS ---
+const SWIPE_THRESHOLD = 120;
+const ROTATION_RANGE = 25;
 
 export default function NeuralMatchDeck() {
   const { token, loading: authLoading } = useAuth();
   const [matches, setMatches] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [exitDirection, setExitDirection] = useState(null); // Track button actions
+  const [exitDirection, setExitDirection] = useState(null);
 
+  // 1. Fetch & Prepare Data
   useEffect(() => {
     if (authLoading) return;
     getRecommendedMatches(token)
-      .then((data) => setMatches(data))
+      .then((data) => {
+        // Sanitize and add AI Reason if missing
+        const enriched = data.map(m => ({
+          ...m,
+          reason: m.reason || generateAIReason(m.score)
+        }));
+        setMatches(enriched);
+      })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [token, authLoading]);
 
-  // --- 2. Handle Actions (Swipe OR Button Click) ---
+  // 2. Action Handler (Swipe/Click/Key)
   const handleAction = useCallback((direction) => {
-    if (currentIndex >= matches.length || loading) return;
+    if (currentIndex >= matches.length || loading || exitDirection) return;
 
     setExitDirection(direction);
 
-    // Call API if "Like" (Right)
+    // API Call (Optimistic UI)
     if (direction === "right") {
-        const user = matches[currentIndex]?.user;
-        if (user) requestConnection(token, user._id).catch(console.error);
+      const user = matches[currentIndex]?.user;
+      if (user) requestConnection(token, user._id).catch(console.error);
     }
 
     // Animation Delay
     setTimeout(() => {
-        setCurrentIndex((prev) => prev + 1);
-        setExitDirection(null);
-    }, 200);
-  }, [currentIndex, matches, loading, token]);
+      setCurrentIndex((prev) => prev + 1);
+      setExitDirection(null);
+    }, 250);
+  }, [currentIndex, matches, loading, exitDirection, token]);
 
+  // 3. Keyboard Support
   useEffect(() => {
     const handleKeyDown = (e) => {
-        if (e.key === "ArrowLeft") handleAction("left");
-        if (e.key === "ArrowRight") handleAction("right");
+      if (e.key === "ArrowLeft") handleAction("left");
+      if (e.key === "ArrowRight") handleAction("right");
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleAction]);
 
+  // --- RENDER STATES ---
   if (loading || authLoading) return <ScanningAnimation />;
   if (currentIndex >= matches.length) return <EmptyState />;
 
+  // We only render the top 2 cards for performance
+  const visibleMatches = matches.slice(currentIndex, currentIndex + 2).reverse();
+
   return (
-    <div className="relative w-full h-[650px] flex flex-col items-center justify-center">
-      {/* Header */}
-      <div className="w-full max-w-sm flex justify-between items-end mb-6 px-2">
+    <div className="relative w-full h-[700px] flex flex-col items-center justify-center">
+
+      {/* HEADER */}
+      <div className="w-full max-w-sm flex justify-between items-end mb-8 px-2">
         <div>
-           <h3 className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 text-[24px] font-black uppercase tracking-wider">
-            Neural Sync
+          <h3 className="text-white text-3xl font-black uppercase tracking-tighter leading-none">
+            Neural<span className="text-blue-500">Sync</span>
           </h3>
-          <p className="text-xs text-blue-300/60 font-mono">AI-POWERED MENTOR MATCHING</p>
+          <p className="text-[10px] text-gray-500 font-mono tracking-[0.2em] uppercase mt-1">
+            AI Mentor Matching v2.0
+          </p>
         </div>
-        <div className="flex gap-1 items-center">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
-            <span className="text-[10px] text-green-400 font-mono tracking-widest">LIVE</span>
+        <div className="flex gap-2 items-center px-2 py-1 rounded bg-white/5 border border-white/10">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+          <span className="text-[9px] text-gray-400 font-mono tracking-widest uppercase">
+            {matches.length - currentIndex} Candidates
+          </span>
         </div>
       </div>
 
-      {/* 3D Card Stack */}
-      <div className="relative w-full max-w-sm h-[420px]">
+      {/* CARD STACK */}
+      <div className="relative w-full max-w-sm h-[480px]">
         <AnimatePresence>
-          {matches.slice(currentIndex, currentIndex + 2).reverse().map((match, index) => {
-            const isTop = index === 1; 
-            const actualIsTop = match === matches[currentIndex];
-            
+          {visibleMatches.map((match, index) => {
+            const isTop = index === visibleMatches.length - 1;
+
             return (
-              <HolographicCard 
+              <HolographicCard
                 key={match.user._id}
                 data={match}
-                isTop={actualIsTop}
-                onSwipe={(dir) => handleAction(dir)}
-                forcedExit={actualIsTop ? exitDirection : null}
+                isTop={isTop}
+                onSwipe={handleAction}
+                forcedExit={isTop ? exitDirection : null}
               />
             );
           })}
         </AnimatePresence>
       </div>
 
-      {/* --- 3. NEW: Action Buttons --- */}
-      <div className="flex gap-8 mt-10">
-        <button 
-            onClick={() => handleAction("left")}
-            className="w-16 h-16 rounded-full bg-[#0f172a] border border-red-500/30 text-red-500 flex items-center justify-center hover:bg-red-500/10 hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-        >
-            <span className="material-symbols-outlined text-3xl">close</span>
-        </button>
+      {/* ACTION BUTTONS */}
+      <div className="flex gap-6 mt-8">
+        <ControlButton icon="close" color="text-red-500" borderColor="border-red-500/30" onClick={() => handleAction("left")} />
+        <ControlButton icon="favorite" color="text-emerald-500" borderColor="border-emerald-500/30" onClick={() => handleAction("right")} />
+      </div>
 
-        <button 
-            onClick={() => handleAction("right")}
-            className="w-16 h-16 rounded-full bg-[#0f172a] border border-green-500/30 text-green-500 flex items-center justify-center hover:bg-green-500/10 hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(34,197,94,0.2)]"
-        >
-            <span className="material-symbols-outlined text-3xl">favorite</span>
-        </button>
+      {/* KEYBOARD HINT */}
+      <div className="mt-6 flex gap-8 opacity-30 text-[10px] uppercase tracking-widest font-mono text-white">
+        <span>← REJECT</span>
+        <span>CONNECT →</span>
       </div>
 
     </div>
   );
 }
 
-// --- Sub-component: The 3D Card ---
-function HolographicCard({ data, isTop, onSwipe, forcedExit }) {
-  const navigate = useNavigate(); // Hook for navigation
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-15, 15]);
-  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
-  const border = useTransform(x, [-150, 0, 150], ["1px solid rgba(239,68,68,0.5)", "1px solid rgba(59,130,246,0.3)", "1px solid rgba(34,197,94,0.5)"]);
+// --- SUB-COMPONENTS ---
 
-  const handleDragEnd = (event, info) => {
-    if (info.offset.x > 100) onSwipe("right");
-    else if (info.offset.x < -100) onSwipe("left");
+const HolographicCard = React.memo(({ data, isTop, onSwipe, forcedExit }) => {
+  const navigate = useNavigate();
+
+  // Physics Engine
+  const x = useMotionValue(0);
+  const scale = useTransform(x, [-200, 200], [0.9, 0.9]); // Slight shrink on drag
+  const rotate = useTransform(x, [-200, 200], [-ROTATION_RANGE, ROTATION_RANGE]);
+  const opacity = useTransform(x, [-250, -150, 0, 150, 250], [0, 1, 1, 1, 0]);
+
+  // Semantic Feedback (The "Stamp")
+  const likeOpacity = useTransform(x, [50, 150], [0, 1]);
+  const nopeOpacity = useTransform(x, [-50, -150], [0, 1]);
+  const cardBorder = useTransform(x, [-150, 0, 150], ["rgba(239,68,68,0.5)", "rgba(255,255,255,0.1)", "rgba(16,185,129,0.5)"]);
+
+  const handleDragEnd = (_, info) => {
+    if (Math.abs(info.offset.x) > SWIPE_THRESHOLD) {
+      onSwipe(info.offset.x > 0 ? "right" : "left");
+    }
   };
 
-  const matchPercent = Math.round((data.score || 0) * 100); 
+  const matchPercent = Math.round((data.score || 0) * 100);
+
+  // Back Card Styles (Depth Illusion)
+  const variants = {
+    top: { scale: 1, y: 0, opacity: 1, zIndex: 10, filter: "blur(0px)" },
+    back: { scale: 0.92, y: 30, opacity: 0.6, zIndex: 0, filter: "blur(2px)" },
+    exit: (custom) => ({
+      x: custom === "right" ? 500 : -500,
+      opacity: 0,
+      rotate: custom === "right" ? 20 : -20,
+      transition: { duration: 0.25, ease: "easeIn" }
+    })
+  };
 
   return (
     <motion.div
-      style={{ x, rotate, opacity, border: isTop ? border : "none", zIndex: isTop ? 10 : 0 }}
+      style={{
+        x: isTop ? x : 0,
+        rotate: isTop ? rotate : 0,
+        borderColor: isTop ? cardBorder : "transparent"
+      }}
+      variants={variants}
+      initial="back"
+      animate={forcedExit ? "exit" : isTop ? "top" : "back"}
+      custom={forcedExit}
       drag={isTop ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
-      
-      // Handle Forced Exit (Button Clicks)
-      animate={forcedExit ? { x: forcedExit === "right" ? 500 : -500, opacity: 0 } : { scale: 1, y: 0, opacity: 1 }}
-      initial={{ scale: 0.9, y: 20, opacity: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      
-      className={`absolute inset-0 bg-[#0f172a]/90 backdrop-blur-xl rounded-3xl p-6 shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing border border-white/10 ${!isTop && "pointer-events-none grayscale opacity-40"}`}
+      whileTap={{ cursor: "grabbing" }}
+      className={`absolute inset-0 bg-white dark:bg-[#0f172a] rounded-[2rem] border overflow-hidden cursor-grab shadow-2xl ${isTop ? 'border-gray-200 dark:border-white/10' : 'border-transparent'}`}
     >
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
-      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 blur-[60px] rounded-full pointer-events-none" />
+      {/* BACKGROUND NOISE */}
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay" />
 
-      {/* Match Score */}
-      <div className="absolute top-4 right-4 flex items-center justify-center w-14 h-14">
-        <svg className="w-full h-full -rotate-90">
-            <circle cx="28" cy="28" r="26" stroke="#1e293b" strokeWidth="4" fill="none" />
-            <circle cx="28" cy="28" r="26" stroke={matchPercent > 80 ? "#10b981" : "#3b82f6"} strokeWidth="4" fill="none" strokeDasharray="163" strokeDashoffset={163 - (163 * matchPercent) / 100} strokeLinecap="round" />
-        </svg>
-        <span className="absolute text-xs font-bold text-white">{matchPercent}%</span>
-      </div>
+      {/* SEMANTIC STAMPS (The "Tinder" Effect) */}
+      {isTop && (
+        <>
+          <motion.div style={{ opacity: likeOpacity }} className="absolute top-8 left-8 z-50 pointer-events-none border-4 border-emerald-500 rounded-lg px-4 py-2 -rotate-12 bg-black/50 backdrop-blur-md">
+            <span className="text-emerald-500 font-black text-2xl tracking-widest uppercase">CONNECT</span>
+          </motion.div>
+          <motion.div style={{ opacity: nopeOpacity }} className="absolute top-8 right-8 z-50 pointer-events-none border-4 border-red-500 rounded-lg px-4 py-2 rotate-12 bg-black/50 backdrop-blur-md">
+            <span className="text-red-500 font-black text-2xl tracking-widest uppercase">PASS</span>
+          </motion.div>
+        </>
+      )}
 
-      <div className="relative z-10 flex flex-col h-full mt-4">
-        {/* --- 4. CLICKABLE PROFILE AREA --- */}
-        <div 
-            onClick={() => isTop && navigate(`/user/${data.user._id}`)}
-            className="group cursor-pointer"
+      {/* --- CONTENT --- */}
+      <div className="relative h-full flex flex-col p-6">
+
+        {/* PROFILE IMAGE */}
+        <div
+          onClick={() => isTop && navigate(`/user/${data.user._id}`)}
+          className="relative w-full aspect-square rounded-2xl overflow-hidden mb-6 group cursor-pointer"
         >
-            <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-blue-500 to-purple-600 p-[2px] shadow-lg shadow-blue-500/20 mb-4 group-hover:scale-105 transition-transform">
-                <img 
-                    src={data.user.avatar || `https://ui-avatars.com/api/?name=${data.user.username}&background=0D8ABC&color=fff`} 
-                    alt="avatar" 
-                    className="w-full h-full rounded-2xl object-cover bg-gray-900"
-                />
+          <img
+            src={data.user.avatar || `https://ui-avatars.com/api/?name=${data.user.username}&background=0D8ABC&color=fff`}
+            alt="avatar"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
+
+          {/* Match Score Badge */}
+          <div className="absolute bottom-4 left-4 flex items-center gap-2">
+            <div className="relative w-10 h-10">
+              <svg className="w-full h-full -rotate-90">
+                <circle cx="20" cy="20" r="18" stroke="rgba(255,255,255,0.2)" strokeWidth="3" fill="none" />
+                <circle cx="20" cy="20" r="18" stroke="#3b82f6" strokeWidth="3" fill="none" strokeDasharray="113" strokeDashoffset={113 - (113 * matchPercent) / 100} strokeLinecap="round" />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{matchPercent}%</span>
             </div>
-            <h2 className="text-2xl font-black text-white mb-1 group-hover:text-blue-400 transition-colors underline-offset-4 group-hover:underline">
-                {data.user.fullName}
-            </h2>
+            <div>
+              <p className="text-white font-bold text-lg leading-none">{data.user.fullName}</p>
+              <p className="text-gray-400 text-xs">@{data.user.username}</p>
+            </div>
+          </div>
         </div>
 
-        <p className="text-blue-400 text-sm font-medium mb-4 flex items-center gap-2">
-            @{data.user.username}
-            <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-300">
-                Lvl {data.user.level || 1}
+        {/* AI EXPLAINABILITY */}
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="material-symbols-outlined text-blue-400 text-[14px]">psychology</span>
+            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">AI Rationale</span>
+          </div>
+          <p className="text-xs text-blue-200/80 leading-relaxed font-medium">
+            "{data.reason}"
+          </p>
+        </div>
+
+        {/* BIO */}
+        <div className="flex-1">
+          <p className="text-gray-400 text-sm leading-relaxed line-clamp-3 italic">
+            "{data.user.bio || "Searching for code, coffee, and collaboration."}"
+          </p>
+        </div>
+
+        {/* SKILLS TAGS */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(data.user.skills || []).slice(0, 3).map((skill, i) => (
+            <span key={i} className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-bold text-gray-300 uppercase tracking-wider">
+              {skill.name}
             </span>
-        </p>
-
-        <p className="text-gray-400 text-sm line-clamp-3 mb-6 italic leading-relaxed">
-            "{data.user.bio || "Ready to collaborate and build amazing things."}"
-        </p>
-
-        <div className="mt-auto">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Top Synergies</p>
-            <div className="flex flex-wrap gap-2">
-                {(data.user.skills || []).slice(0, 3).map((skill, i) => (
-                    <span key={i} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 font-medium">
-                        {skill.name}
-                    </span>
-                ))}
-            </div>
+          ))}
         </div>
       </div>
+
     </motion.div>
   );
+});
+
+function ControlButton({ icon, color, borderColor, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-14 h-14 rounded-full bg-[#0f172a] border ${borderColor} ${color} flex items-center justify-center hover:bg-white/5 active:scale-95 transition-all shadow-xl`}
+    >
+      <span className="material-symbols-outlined text-2xl font-bold">{icon}</span>
+    </button>
+  )
 }
 
-// Keep Animations and EmptyState...
 function ScanningAnimation() {
   return (
-    <div className="w-full h-[400px] flex flex-col items-center justify-center relative overflow-hidden rounded-3xl bg-[#0f172a]/30 border border-white/5">
-      <div className="absolute inset-0 bg-blue-500/5 animate-pulse" />
-      <div className="w-full h-1 bg-blue-500/50 absolute top-0 shadow-[0_0_15px_#3b82f6] animate-[scan_2s_ease-in-out_infinite]" />
-      <p className="text-blue-400 font-mono text-sm animate-pulse tracking-widest">SCANNING NEURAL NETWORK...</p>
-      <style>{`@keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }`}</style>
+    <div className="w-full h-[500px] flex flex-col items-center justify-center bg-[#0f172a]/30 rounded-3xl border border-white/5">
+      <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4" />
+      <p className="text-blue-400 font-mono text-xs tracking-[0.2em] animate-pulse">CALCULATING SYNERGY...</p>
     </div>
   );
 }
 
 function EmptyState() {
-    return (
-        <div className="w-full h-[400px] flex flex-col items-center justify-center text-center p-6 border border-white/5 rounded-3xl bg-[#0f172a]/30">
-            <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4">
-                <span className="text-2xl">✨</span>
-            </div>
-            <h4 className="text-white font-bold text-lg mb-2">All Caught Up!</h4>
-            <p className="text-gray-400 text-sm">You've scanned all current recommendations.</p>
-        </div>
-    )
+  return (
+    <div className="w-full h-[500px] flex flex-col items-center justify-center text-center p-8 bg-[#0f172a] rounded-[2rem] border border-white/5">
+      <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mb-6">
+        <span className="material-symbols-outlined text-3xl text-gray-500">check_circle</span>
+      </div>
+      <h4 className="text-white font-bold text-xl mb-2">Queue Cleared</h4>
+      <p className="text-gray-500 text-sm max-w-xs mx-auto mb-8">
+        You've reviewed all high-potential candidates for now. New patterns will be detected automatically.
+      </p>
+      <div className="px-4 py-2 bg-white/5 rounded-lg border border-white/10">
+        <span className="text-[10px] text-gray-400 uppercase tracking-widest">Next Scan: 24h</span>
+      </div>
+    </div>
+  )
+}
+
+// --- HELPER: Fake AI Reason Generator (If backend is missing it) ---
+function generateAIReason(score) {
+  if (score > 0.85) return "High algorithmic overlap in Frontend Architecture and System Design patterns.";
+  if (score > 0.7) return "Complimentary skill set detected. Strong potential for mentorship velocity.";
+  return "Based on shared interest in emerging tech stacks and recent activity trends.";
 }

@@ -6,10 +6,12 @@ class MatchController {
   getRecommendations = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const minScore = parseFloat(req.query.minScore) || 0.3;
+    const mode = req.query.mode || 'project'; // Default to 'project' (complementary)
 
     const matches = await matchService.findMatches(req.user.userId, {
       limit,
-      minScore
+      minScore,
+      mode
     });
 
     res.status(200).json({
@@ -24,33 +26,33 @@ class MatchController {
     const userId = req.user.userId;
 
     if (!targetUserId) {
-        return res.status(400).json({ success: false, error: "Target User ID is required" });
+      return res.status(400).json({ success: false, error: "Target User ID is required" });
     }
 
     // 1. DAILY LIMIT CHECK (Scarcity creates value)
     const today = new Date();
-    today.setHours(0,0,0,0);
-    
+    today.setHours(0, 0, 0, 0);
+
     // Check how many matches user requested today (using matchHistory)
     const user = await userService.getUserById(userId);
-    const dailyRequests = user.matchHistory.filter(m => 
-        new Date(m.matchedAt) >= today && m.status === 'pending'
+    const dailyRequests = user.matchHistory.filter(m =>
+      new Date(m.matchedAt) >= today && m.status === 'pending'
     ).length;
 
     const DAILY_LIMIT = 5;
     if (dailyRequests >= DAILY_LIMIT) {
-        return res.status(429).json({ 
-            success: false, 
-            error: "You've reached your connection limit for today. Come back tomorrow!",
-            isLimitReached: true
-        });
+      return res.status(429).json({
+        success: false,
+        error: "You've reached your connection limit for today. Come back tomorrow!",
+        isLimitReached: true
+      });
     }
 
     // 2. EXECUTE MATCH REQUEST
     const result = await matchService.requestMatch(
-        userId,
-        targetUserId,
-        message
+      userId,
+      targetUserId,
+      message
     );
 
     // 3. GAMIFICATION ENGINE (Variable Rewards)
@@ -58,17 +60,17 @@ class MatchController {
     let streakBonus = false;
 
     try {
-        // Bonus for first connection of the day
-        if (dailyRequests === 0) {
-            xpAwarded += 50; // "First Move" Bonus
-            streakBonus = true;
-        }
-        
-        await userService.addUserXP(userId, xpAwarded);
-        
-        // **CRITICAL**: Keep the daily streak alive
-        await userService.recordActivity(userId); 
-        
+      // Bonus for first connection of the day
+      if (dailyRequests === 0) {
+        xpAwarded += 50; // "First Move" Bonus
+        streakBonus = true;
+      }
+
+      await userService.addUserXP(userId, xpAwarded);
+
+      // **CRITICAL**: Keep the daily streak alive
+      await userService.recordActivity(userId);
+
     } catch (e) { console.error("Gamification Error", e); }
 
     // 4. NOTIFICATION TRIGGER (Simulation)
@@ -76,18 +78,18 @@ class MatchController {
     // notificationService.send(targetUserId, 'new_match_request', user.username);
 
     res.status(200).json({
-        success: true,
-        message: 'Connection signal sent',
-        data: {
-            ...result,
-            rewards: {
-                xp: xpAwarded,
-                streakBonus,
-                remainingRequests: DAILY_LIMIT - (dailyRequests + 1)
-            }
+      success: true,
+      message: 'Connection signal sent',
+      data: {
+        ...result,
+        rewards: {
+          xp: xpAwarded,
+          streakBonus,
+          remainingRequests: DAILY_LIMIT - (dailyRequests + 1)
         }
+      }
     });
-});
+  });
 
   getComplementaryUsers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;

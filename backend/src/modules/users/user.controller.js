@@ -5,12 +5,14 @@ const Joi = require('joi');
 const aiService = require('../ai/ai.service');
 const logger = require('../../core/config/loggerConfig');
 // ✅ FIX 1: Import the User Model
-const User = require('./user.model'); 
+const User = require('./user.model');
 
 const updateUserSchema = Joi.object({
   fullName: Joi.string().min(2).max(100),
   bio: Joi.string().max(500),
-  avatar: Joi.string().uri(),
+  avatar: Joi.string().allow(''), // Relaxed validation to allow relative paths like /assets/logos/...
+  title: Joi.string().max(100).allow(''),
+  location: Joi.string().max(100).allow(''),
   preferences: Joi.object({
     learningGoals: Joi.array().items(Joi.string()),
     availableHours: Joi.number().min(0).max(168),
@@ -31,7 +33,7 @@ const updateSkillsSchema = Joi.object({
       name: Joi.string().required(),
       proficiency: Joi.string().valid('beginner', 'intermediate', 'advanced', 'expert'),
       category: Joi.string(),
-      logo: Joi.string().uri().allow(null, ''), 
+      logo: Joi.string().uri().allow(null, ''),
       themeColor: Joi.string().allow(null, ''),
       source: Joi.string().valid('github', 'manual', 'inferred'),
       yearsOfExperience: Joi.number().min(0)
@@ -42,7 +44,7 @@ const updateSkillsSchema = Joi.object({
 class UserController {
   getMe = asyncHandler(async (req, res) => {
     const user = await userService.getUserById(req.user.userId);
-    
+
     res.status(200).json({
       success: true,
       data: user
@@ -71,7 +73,7 @@ class UserController {
   getUserById = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const user = await userService.getUserById(userId);
-    
+
     res.status(200).json({
       success: true,
       data: user
@@ -81,14 +83,14 @@ class UserController {
   getUserByUsername = asyncHandler(async (req, res) => {
     const { username } = req.params;
     const user = await userService.getUserByUsername(username);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: user
@@ -104,12 +106,12 @@ class UserController {
       // 1. Generate AI Embedding (Tech DNA)
       let embedding = [];
       try {
-          embedding = await aiService.generateEmbedding(skillNames);
+        embedding = await aiService.generateEmbedding(skillNames);
       } catch (e) { console.error("AI Error:", e.message); }
 
       // 2. Sync with Neo4j (Graph Database)
       try {
-          await skillGraphService.updateUserSkills(userId, skills);
+        await skillGraphService.updateUserSkills(userId, skills);
       } catch (e) { console.error("Neo4j Error:", e.message); }
 
       // 3. Save to MongoDB
@@ -129,7 +131,7 @@ class UserController {
 
   getMySkills = asyncHandler(async (req, res) => {
     const user = await userService.getUserById(req.user.userId);
-    
+
     res.status(200).json({
       success: true,
       count: user.skills ? user.skills.length : 0,
@@ -140,16 +142,16 @@ class UserController {
   getUserSkillGraph = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const targetUserId = userId || req.user.userId;
-    
+
     const skillGraph = await skillGraphService.getUserSkillGraph(targetUserId);
-    
+
     if (!skillGraph) {
       return res.status(404).json({
         success: false,
         error: 'Skill graph not found'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: skillGraph
@@ -161,7 +163,7 @@ class UserController {
       req.user.userId,
       parseInt(req.query.limit) || 5
     );
-    
+
     res.status(200).json({
       success: true,
       data: recommendations
@@ -170,7 +172,7 @@ class UserController {
 
   searchUsers = asyncHandler(async (req, res) => {
     const { q, skills, minXP, page = 1, limit = 20 } = req.query;
-    
+
     const filters = {};
     if (skills) {
       filters.skills = Array.isArray(skills) ? skills : [skills];
@@ -178,14 +180,14 @@ class UserController {
     if (minXP) {
       filters.minXP = parseInt(minXP);
     }
-    
+
     const result = await userService.searchUsers(
       q,
       filters,
       parseInt(page),
       parseInt(limit)
     );
-    
+
     res.status(200).json({
       success: true,
       data: result.users,
@@ -196,7 +198,7 @@ class UserController {
   getTopUsers = asyncHandler(async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const users = await userService.getTopUsers(limit);
-    
+
     res.status(200).json({
       success: true,
       data: users
@@ -206,9 +208,9 @@ class UserController {
   getUserStatistics = asyncHandler(async (req, res) => {
     const { userId } = req.params;
     const targetUserId = userId || req.user.userId;
-    
+
     const statistics = await userService.getUserStatistics(targetUserId);
-    
+
     res.status(200).json({
       success: true,
       data: statistics
@@ -218,14 +220,14 @@ class UserController {
   updateMatchFeedback = asyncHandler(async (req, res) => {
     const { matchId } = req.params;
     const { status, feedback } = req.body;
-    
+
     if (!['accepted', 'rejected', 'completed'].includes(status)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid status'
       });
     }
-    
+
     const user = await userService.updateMatchStatus(
       req.user.userId,
       matchId,
@@ -233,7 +235,7 @@ class UserController {
       feedback
     );
     await userService.recordActivity(req.user.userId);
-    
+
     res.status(200).json({
       success: true,
       message: 'Match feedback updated',
@@ -243,7 +245,7 @@ class UserController {
 
   deleteAccount = asyncHandler(async (req, res) => {
     await userService.deleteUser(req.user.userId);
-    
+
     res.status(200).json({
       success: true,
       message: 'Account deleted successfully'

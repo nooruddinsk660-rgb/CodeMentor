@@ -9,13 +9,10 @@ const Joi = require('joi');
 // Input validation schemas
 const usernameSchema = Joi.object({
   username: Joi.string()
-    .alphanum()
-    .min(1)
-    .max(39) // GitHub username max length
+    .trim()
     .required()
     .messages({
-      'string.alphanum': 'Username must only contain alphanumeric characters',
-      'string.max': 'Username cannot exceed 39 characters'
+      'string.empty': 'Username is required'
     })
 });
 
@@ -51,7 +48,7 @@ class GitHubController {
 
     // Perform GitHub analysis with timeout protection
     const analysisPromise = githubService.analyzeUserSkills(username, accessToken);
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('GitHub analysis timeout')), 60000)
     );
 
@@ -74,6 +71,8 @@ class GitHubController {
           totalStars: analysis.totalStars || 0,
           totalForks: analysis.totalForks || 0,
           topLanguages: analysis.topLanguages || [],
+          languageStats: analysis.languageStats || {},
+          recentRepos: analysis.recentRepos || [],
           recentActivity: analysis.activity || {}
         });
 
@@ -96,7 +95,7 @@ class GitHubController {
 
         // Award XP for completing analysis
         await userService.addUserXP(req.user.userId, 50);
-        
+
         logger.info(`GitHub analysis completed successfully for user: ${req.user.userId}`);
       } catch (updateError) {
         logger.error('Failed to update user data after GitHub analysis:', updateError);
@@ -128,7 +127,7 @@ class GitHubController {
     const accessToken = req.user?.githubAccessToken || null;
 
     logger.debug(`Fetching repositories for: ${username}`);
-    
+
     const repos = await githubService.getUserRepositories(username, accessToken);
 
     res.status(200).json({
@@ -153,7 +152,7 @@ class GitHubController {
     const accessToken = req.user?.githubAccessToken || null;
 
     logger.debug(`Fetching profile for: ${username}`);
-    
+
     const profile = await githubService.getUserProfile(username, accessToken);
 
     // Sanitize profile data before sending
@@ -193,7 +192,7 @@ class GitHubController {
     const accessToken = req.user?.githubAccessToken || null;
 
     logger.debug(`Searching repositories with query: ${q}`);
-    
+
     const results = await githubService.searchRepositories(q, accessToken);
 
     res.status(200).json({
@@ -202,6 +201,30 @@ class GitHubController {
       count: results.length,
       query: q,
       searchedAt: new Date().toISOString()
+    });
+  });
+
+  /**
+   * Get repository file tree
+   * @security Input validation for username/repo
+   */
+  getRepoTree = asyncHandler(async (req, res) => {
+    const { username, repoName } = req.params;
+
+    // Basic validation
+    if (!username || !repoName) {
+      throw new ValidationError('Username and Repo Name are required');
+    }
+
+    const accessToken = req.user?.githubAccessToken || null;
+    logger.debug(`Fetching tree for: ${username}/${repoName}`);
+
+    const tree = await githubService.getRepositoryTree(username, repoName, accessToken);
+
+    res.status(200).json({
+      success: true,
+      data: tree,
+      count: tree.length
     });
   });
 }

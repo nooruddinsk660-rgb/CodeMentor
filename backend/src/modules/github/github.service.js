@@ -13,7 +13,7 @@ class GitHubService {
     try {
       const headers = {
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'CodeMentor-AI'
+        'User-Agent': 'OrbitDev-AI'
       };
 
       if (token) {
@@ -159,6 +159,8 @@ class GitHubService {
         this.getUserActivity(username, accessToken)
       ]);
 
+      logger.info(`Fetched ${repos.length} repos for ${username}`);
+
       // Calculate language statistics
       const languageStats = {};
       const topicStats = {};
@@ -181,8 +183,8 @@ class GitHubService {
           topicStats[topic] = (topicStats[topic] || 0) + 1;
         });
 
-        // Fetch detailed language stats for top repos
-        if (repo.stars > 0 || originalRepos.indexOf(repo) < 10) {
+        // Fetch detailed language stats for top repos (Reduced to 5 to save API calls)
+        if (originalRepos.indexOf(repo) < 5) {
           try {
             const languages = await this.getRepositoryLanguages(repo.fullName, accessToken);
             Object.entries(languages).forEach(([lang, bytes]) => {
@@ -192,8 +194,8 @@ class GitHubService {
               languageStats[lang] += bytes;
             });
           } catch (error) {
-            // Continue if language fetch fails for a repo
-            logger.warn(`Failed to fetch languages for ${repo.fullName}`);
+            // Continue if language fetch fails (e.g. rate limit) - don't block entire analysis
+            logger.warn(`Failed to fetch languages for ${repo.fullName} (skipping detail)`);
           }
         }
       }
@@ -211,7 +213,7 @@ class GitHubService {
 
       // Extract skills from languages and topics
       const skills = [];
-      
+
       // Add programming languages as skills
       topLanguages.forEach(lang => {
         if (lang.percentage > 5) { // Only include if >5% of codebase
@@ -262,12 +264,26 @@ class GitHubService {
         });
       }
 
+      // Get recent repositories (include forks for activity feed)
+      const recentRepos = repos
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .slice(0, 20)
+        .map(repo => ({
+          name: repo.name,
+          desc: repo.description,
+          lang: repo.language,
+          url: repo.url,
+          updatedAt: repo.updatedAt
+        }));
+
       const analysisResult = {
         profile,
-        repositoryCount: originalRepos.length,
+        repositoryCount: profile.publicRepos, // Use GitHub's count (includes forks)
         totalStars,
         totalForks,
         topLanguages,
+        languageStats,
+        recentRepos,
         skills,
         activity,
         analyzedAt: new Date()
@@ -285,7 +301,7 @@ class GitHubService {
     try {
       const url = `${this.baseURL}/repos/${fullRepoName}/readme`;
       const readme = await this.makeRequest(url, accessToken);
-      
+
       // Decode base64 content
       const content = Buffer.from(readme.content, 'base64').toString('utf-8');
       return content;
@@ -303,6 +319,24 @@ class GitHubService {
     } catch (error) {
       logger.error('Error searching repositories:', error);
       throw error;
+    }
+  }
+  async getRepositoryTree(username, repoName, accessToken = null) {
+    try {
+      // 1. Get default branch SHA
+      const repoUrl = `${this.baseURL}/repos/${username}/${repoName}`;
+      const repoData = await this.makeRequest(repoUrl, accessToken);
+      const defaultBranch = repoData.default_branch;
+
+      // 2. Get Tree recursively
+      const treeUrl = `${this.baseURL}/repos/${username}/${repoName}/git/trees/${defaultBranch}?recursive=1`;
+      const treeData = await this.makeRequest(treeUrl, accessToken);
+
+      return treeData.tree || [];
+    } catch (error) {
+      logger.error(`Error fetching tree for ${username}/${repoName}:`, error.message);
+      // Fallback: If recursive tree fails (empty repo or too large), return empty
+      return [];
     }
   }
 }

@@ -320,7 +320,10 @@ export default function SettingsPage() {
                                             </div>
                                         </div>
                                         <button
-                                            onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`}
+                                            onClick={() => {
+                                                const apiUrl = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+                                                window.location.href = `${apiUrl}/auth/github`;
+                                            }}
                                             className={`px-4 py-2 rounded-lg font-bold text-sm transition-all
                                                 ${user?.githubId
                                                     ? 'bg-green-500/10 text-green-500 cursor-default'

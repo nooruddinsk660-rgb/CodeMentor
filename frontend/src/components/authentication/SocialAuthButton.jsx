@@ -4,7 +4,8 @@ import { Github } from "lucide-react";
 export default function SocialAuthButton({ text }) {
   const handleLogin = () => {
     // Redirect to Backend API to start OAuth flow
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
+    const apiUrl = import.meta.env.VITE_API_URL.replace(/\/$/, "");
+    window.location.href = `${apiUrl}/auth/github`;
   };
 
   return (

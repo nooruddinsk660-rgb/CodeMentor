@@ -124,6 +124,9 @@ async function createServer() {
     }
   }));
 
+  // Prevent HTTP Parameter Pollution
+  app.use(require('hpp')());
+
   // Session configuration with MongoDB store
   const sessionConfig = {
     ...config.session,

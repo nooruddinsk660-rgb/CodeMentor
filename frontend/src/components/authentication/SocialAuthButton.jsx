@@ -1,4 +1,6 @@
 // frontend/src/components/authentication/SocialAuthButton.jsx
+import { Github } from "lucide-react";
+
 export default function SocialAuthButton({ text }) {
   const handleLogin = () => {
     // Redirect to Backend API to start OAuth flow
@@ -6,17 +8,19 @@ export default function SocialAuthButton({ text }) {
   };
 
   return (
-    <button 
-      type="button" // Important so it doesn't submit forms if inside one
+    <button
+      type="button"
       onClick={handleLogin}
       className="
-      w-full h-11 flex items-center justify-center gap-3
-      bg-[#24292F] border border-slate-700
-      rounded-lg text-white text-sm font-semibold
-      hover:bg-[#2c313a] transition shadow-lg
+      w-full h-12 flex items-center justify-center gap-3
+      bg-[#24292F] hover:bg-[#2c313a] 
+      border border-white/10 hover:border-white/20
+      rounded-xl text-white font-medium transition-all duration-300
+      shadow-lg hover:shadow-xl hover:-translate-y-0.5
+      group
     ">
-      <img src="https://cdn.simpleicons.org/github/white" className="w-5 h-5" alt="GitHub" />
-      {text}
+      <Github size={20} className="text-white group-hover:scale-110 transition-transform" />
+      <span>{text}</span>
     </button>
   );
 }

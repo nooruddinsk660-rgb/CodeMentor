@@ -24,6 +24,7 @@ export default {
         "gradient-x": "gradient-x 15s ease infinite",
         shine: "shine 2s linear infinite",
         marquee: "marquee 30s linear infinite",
+        "shimmer-border": "shimmer-border 4s linear infinite",
       },
       keyframes: {
         "gradient-x": {
@@ -44,6 +45,10 @@ export default {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(-50%)" },
         },
+        "shimmer-border": {
+          "0%": { "background-position": "200% 0" },
+          "100%": { "background-position": "-200% 0" }
+        }
       },
     },
   },

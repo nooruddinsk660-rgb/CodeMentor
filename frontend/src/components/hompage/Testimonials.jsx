@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Star, Quote } from "lucide-react";
 
 const testimonials = [
   {
@@ -35,29 +36,33 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section id="testimonials" className="py-24 overflow-hidden relative bg-[#030712]">
+    <section id="testimonials" className="py-24 overflow-hidden relative bg-[#030712] border-t border-white/5">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-[#030712] to-[#030712]" />
 
-      <div className="text-center mb-16 relative z-10">
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
-          Trusted by the <span className="text-cyan-400">Best.</span>
+      <div className="text-center mb-20 relative z-10 px-4">
+        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+          Verified by the <span className="text-cyan-400">Elite.</span>
         </h2>
-        <p className="text-gray-400 opacity-80">
-          Engineers from top companies rely on our neural network.
+        <p className="text-gray-400 opacity-80 max-w-xl mx-auto text-lg">
+          Engineers from top tech companies rely on our neural network to stay ahead.
         </p>
       </div>
 
       {/* Marquee Container */}
-      <div className="relative w-full mask-linear-fade">
+      <div className="relative w-full">
         <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#030712] to-transparent z-10" />
         <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#030712] to-transparent z-10" />
 
-        <div className="flex w-max animate-marquee gap-6 hover:[animation-play-state:paused] cursor-grab active:cursor-grabbing">
+        <div className="flex w-max animate-marquee gap-8 hover:[animation-play-state:paused] py-4">
           {[...testimonials, ...testimonials].map((item, i) => (
             <div
-              key={i}
-              className="w-[400px] h-[200px] p-6 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-white/10 transition-all group"
+              key={`${item.name}-${i}`}
+              className="w-[400px] p-8 rounded-2xl bg-[#0a0f1c] border border-white/5 hover:border-cyan-500/30 transition-all duration-300 group hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-900/10"
             >
-              <div className="flex items-center gap-4 mb-4">
+              <Quote className="w-8 h-8 text-cyan-500/20 mb-4 group-hover:text-cyan-500/50 transition-colors" />
+              <p className="text-gray-300 text-lg leading-relaxed mb-6 font-medium">"{item.text}"</p>
+
+              <div className="flex items-center gap-4 border-t border-white/5 pt-6">
                 <img
                   src={item.avatar}
                   alt={item.name}
@@ -65,10 +70,9 @@ export default function Testimonials() {
                 />
                 <div>
                   <h4 className="text-white font-bold">{item.name}</h4>
-                  <p className="text-xs text-cyan-400 font-mono">{item.role}</p>
+                  <p className="text-sm text-cyan-400 font-mono tracking-wide">{item.role}</p>
                 </div>
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed">"{item.text}"</p>
             </div>
           ))}
         </div>

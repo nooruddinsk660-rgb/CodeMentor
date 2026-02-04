@@ -11,31 +11,92 @@
 @layer components {
 
   /* =========================================================
-     3D CODE CUBE -- ESSENTIAL FEATURE
+     3D CODE CUBE -- DEEP VOID / MASTERPIECE
      ========================================================= */
+  .cube-viewport {
+    perspective: 800px;
+    /* Stronger 3D, less 'flat' */
+    transform-style: preserve-3d;
+  }
+
   .code-cube {
-    --cube-size: 220px;
+    --cube-size: 260px;
     width: var(--cube-size);
     height: var(--cube-size);
     position: relative;
     transform-style: preserve-3d;
-    animation: cube-rotate 10s linear infinite;
+    animation: cube-float-spin 25s linear infinite;
+    /* majestic */
   }
 
+  /* The "Masterpiece" Face */
   .cube-face {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
-    backface-visibility: hidden;
-    box-shadow: 0 6px 30px rgba(2, 6, 23, 0.45);
+    padding: 2rem;
+
+    /* Ultra-premium Dark Glass */
+    background: rgba(10, 10, 12, 0.95);
+    /* Even more opaque to define shape */
+
+    /* Sophisticated Border */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    /* Catch light */
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+
+    border-radius: 4px;
+    /* Sharper corners = more 'cube' like */
+
+    backface-visibility: visible;
+
+    /* Cinematic Shadowing */
+    box-shadow:
+      0 0 80px rgba(0, 0, 0, 0.9) inset,
+      0 0 0 1px rgba(0, 0, 0, 0.5),
+      /* crisp outline */
+      0 0 20px rgba(0, 255, 255, 0.05);
+    /* very subtle glow */
+
+    /* Removed heavy blur to sharpen 3D edges */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    transform-style: preserve-3d;
   }
 
+  /* Reflective Gloss */
+  .cube-face::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(145deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 30%,
+        transparent 100%);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  /* Typography */
+  .face-pre {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: #cbd5e1;
+    /* Soft white */
+    font-weight: 500;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    user-select: none;
+    transform: translateZ(1px);
+    /* Slight pop from glass */
+  }
+
+  /* Face specific transforms */
   .face-front {
     transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2));
   }
@@ -60,13 +121,39 @@
     transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
   }
 
-  @keyframes cube-rotate {
-    from {
-      transform: rotateX(10deg) rotateY(0deg);
+  @keyframes cube-float-spin {
+    0% {
+      transform: rotateX(35deg) rotateY(0deg) translateY(0px);
     }
 
-    to {
-      transform: rotateX(10deg) rotateY(360deg);
+    50% {
+      transform: rotateX(25deg) rotateY(180deg) translateY(-20px);
+    }
+
+    100% {
+      transform: rotateX(35deg) rotateY(360deg) translateY(0px);
+    }
+  }
+
+  @layer utilities {
+
+    /* The Electric Blue Radial Glow */
+    .bg-electric-mesh {
+      background-color: #020617;
+      background-image:
+        radial-gradient(at 0% 0%, rgba(0, 210, 255, 0.15) 0, transparent 50%),
+        radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.1) 0, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(0, 210, 255, 0.15) 0, transparent 50%);
+    }
+
+    /* Text gradient for the AI theme */
+    .text-gradient-blue {
+      @apply bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-blue-400/50;
+    }
+
+    /* Button Glow Effect */
+    .btn-glow-blue {
+      box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
     }
   }
 

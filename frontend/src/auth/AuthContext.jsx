@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
 const AuthContext = createContext(null);
 
@@ -6,6 +6,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // ✅ Restore session and validate token
   useEffect(() => {
@@ -29,6 +30,7 @@ export const AuthProvider = ({ children }) => {
             setToken(storedToken);
           } else {
             // Token expired - clear storage
+            console.warn("Session expired on init");
             localStorage.removeItem("user");
             localStorage.removeItem("token");
           }
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }) => {
           console.error("Auth verification failed:", error);
           localStorage.removeItem("user");
           localStorage.removeItem("token");
+          setError("Session expired. Please login again.");
         }
       }
 
@@ -59,6 +62,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.status === 401) {
+        console.warn("Unauthorized access - logging out");
         logout();
         window.location.href = '/login?session=expired';
       }
@@ -69,23 +73,25 @@ export const AuthProvider = ({ children }) => {
     window.authFetch = interceptor;
   }, [token]);
 
-  const login = ({ user, token }) => {
-    setUser(user);
-    setToken(token);
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("token", token);
-  };
+  const login = useCallback((userData, authToken) => {
+    setUser(userData);
+    setToken(authToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", authToken);
+    setError(null);
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       if (token) {
+        // Build robust logout - don't crash if network fails
         await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
-        });
+        }).catch(err => console.error("Logout network error", err));
       }
     } catch (error) {
       console.error("Logout error:", error);
@@ -94,16 +100,14 @@ export const AuthProvider = ({ children }) => {
       setToken(null);
       localStorage.removeItem("user");
       localStorage.removeItem("token");
+      window.location.href = '/login';
     }
-  };
+  }, [token]);
 
-  const updateUser = (updatedData) => {
-    // 1. Update React State (Instant UI update)
+  const updateUser = useCallback((updatedData) => {
     setUser(updatedData);
-
-    // 2. Update Local Storage (Persist on refresh)
     localStorage.setItem("user", JSON.stringify(updatedData));
-  };
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -112,6 +116,7 @@ export const AuthProvider = ({ children }) => {
         token,
         isAuthenticated: !!token,
         loading,
+        error,
         login,
         logout,
         updateUser,

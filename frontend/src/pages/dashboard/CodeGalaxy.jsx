@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import ForceGraph3D from "react-force-graph-3d";
+// import ForceGraph3D from "react-force-graph-3d"; // Removed for Clean Tech Upgrade
 import { useAuth } from "../../auth/AuthContext";
 import { githubService } from "../../services/github.service";
 import { transformRepoToGraph } from "../../utils/graphTransformer";
@@ -249,63 +249,15 @@ export default function CodeGalaxy() {
                 </div>
 
                 {/* --- 3D VIEWPORT --- */}
-                <div className="absolute inset-0 z-0">
-                    {loading && (
-                        <div className="absolute inset-0 flex items-center justify-center z-50 bg-white/60 dark:bg-black/60 backdrop-blur-sm">
-                            <span className="loader text-cyan-500 text-sm font-mono tracking-widest animate-pulse">
-                                INITIALIZING GRAPHIGINE...
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Warp Speed Overlay */}
-                    <AnimatePresence>
-                        {warpSpeed && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-40 bg-cyan-500/10 mix-blend-screen pointer-events-none"
-                            >
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#06b6d4_100%)] opacity-20" />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    <ForceGraph3D
-                        ref={fgRef}
-                        graphData={graphData}
-
-                        // Nodes
-                        nodeLabel="path"
-                        nodeResolution={32}
-                        nodeVal="val"
-                        nodeColor="color"
-                        nodeOpacity={1}
-
-                        // Links (Masterpiece Connections)
-                        linkColor={() => "rgba(100, 200, 255, 0.15)"}
-                        linkWidth={0.5}
-                        linkDirectionalParticles={2} // Little data packets moving
-                        linkDirectionalParticleSpeed={0.005} // Slow steady flow
-                        linkDirectionalParticleWidth={1}
-
-                        // Environment
-                        backgroundColor="rgba(0,0,0,0)"
-                        showNavInfo={false}
-                        d3AlphaDecay={0.01}
-
-                        // Interactions
-                        onNodeClick={node => {
-                            const distance = 50;
-                            const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-                            fgRef.current.cameraPosition(
-                                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-                                node,
-                                2000
-                            );
-                        }}
-                    />
+                <div className="absolute inset-0 z-0 flex items-center justify-center bg-gray-50/50 dark:bg-[#050510]/50 backdrop-blur-sm">
+                    <div className="text-center p-8 border border-cyan-500/20 rounded-2xl bg-white/10 dark:bg-black/20">
+                        <span className="material-symbols-outlined text-4xl text-cyan-500 mb-4 animate-pulse">hub</span>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Neural Galaxy Upgrade</h3>
+                        <p className="text-gray-500 dark:text-gray-400 font-mono text-sm max-w-md mx-auto">
+                            The 3D visualization engine is currently being upgraded to the new Ceramic Core architecture.
+                            Please check back later for the 2.0 Visualization.
+                        </p>
+                    </div>
                 </div>
             </main>
         </div>
@@ -342,5 +294,3 @@ function HudMetric({ label, value, icon, color, borderColor }) {
         </div>
     )
 }
-
-// --- END ---

@@ -1,7 +1,7 @@
-const API_URL = "http://localhost:5000/auth";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function loginUser(credentials) {
-  const res = await fetch(`${API_URL}/login`, {
+  const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,7 +19,7 @@ export async function loginUser(credentials) {
 }
 
 export async function registerUser(payload) {
-  const res = await fetch(`${API_URL}/register`, {
+  const res = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -38,24 +38,24 @@ export async function registerUser(payload) {
 
 
 export async function logoutUser(token) {
-  const res = await fetch(`${API_URL}/logout`, {
+  const res = await fetch(`${API_URL}/auth/logout`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json", 
+      "Content-Type": "application/json",
     },
   });
 
   if (!res.ok) {
     let errorMessage = "Logout failed";
     try {
-        const errorData = await res.json();
-        errorMessage = errorData.error || errorMessage;
+      const errorData = await res.json();
+      errorMessage = errorData.error || errorMessage;
     } catch (e) {
-        // Response body was likely empty or not JSON
+      // Response body was likely empty or not JSON
     }
     throw new Error(errorMessage);
   }
-  
-  return true; 
+
+  return true;
 }

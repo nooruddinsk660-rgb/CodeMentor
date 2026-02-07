@@ -109,6 +109,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(updatedData));
   }, []);
 
+  const loginWithGithub = useCallback(() => {
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -120,6 +124,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         updateUser,
+        loginWithGithub
       }}
     >
       {children}

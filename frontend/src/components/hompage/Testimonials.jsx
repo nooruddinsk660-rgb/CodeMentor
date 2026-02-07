@@ -36,41 +36,41 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section id="testimonials" className="py-24 overflow-hidden relative bg-[#030712] border-t border-white/5">
+    <section id="testimonials" className="py-20 md:py-32 overflow-hidden relative bg-[#030712] border-t border-white/5">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-[#030712] to-[#030712]" />
 
-      <div className="text-center mb-20 relative z-10 px-4">
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
-          Verified by the <span className="text-cyan-400">Elite.</span>
+      <div className="text-center mb-16 md:mb-24 relative z-10 px-4 max-w-4xl mx-auto">
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight">
+          Verified by the <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Elite.</span>
         </h2>
-        <p className="text-gray-400 opacity-80 max-w-xl mx-auto text-lg">
+        <p className="text-gray-400 opacity-80 max-w-xl mx-auto text-lg md:text-xl font-light text-balance">
           Engineers from top tech companies rely on our neural network to stay ahead.
         </p>
       </div>
 
       {/* Marquee Container */}
       <div className="relative w-full">
-        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#030712] to-transparent z-10" />
-        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#030712] to-transparent z-10" />
+        <div className="absolute left-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-r from-[#030712] to-transparent z-10" />
+        <div className="absolute right-0 top-0 bottom-0 w-12 md:w-32 bg-gradient-to-l from-[#030712] to-transparent z-10" />
 
-        <div className="flex w-max animate-marquee gap-8 hover:[animation-play-state:paused] py-4">
+        <div className="flex w-max animate-marquee gap-6 md:gap-8 hover:[animation-play-state:paused] py-4">
           {[...testimonials, ...testimonials].map((item, i) => (
             <div
               key={`${item.name}-${i}`}
-              className="w-[400px] p-8 rounded-2xl bg-[#0a0f1c] border border-white/5 hover:border-cyan-500/30 transition-all duration-300 group hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-900/10"
+              className="w-[300px] md:w-[400px] p-6 md:p-8 rounded-2xl bg-[#0a0f1c]/80 backdrop-blur-sm border border-white/5 hover:border-cyan-500/30 transition-all duration-300 group hover:-translate-y-1 hover:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] cursor-grab active:cursor-grabbing"
             >
-              <Quote className="w-8 h-8 text-cyan-500/20 mb-4 group-hover:text-cyan-500/50 transition-colors" />
-              <p className="text-gray-300 text-lg leading-relaxed mb-6 font-medium">"{item.text}"</p>
+              <Quote className="w-6 h-6 md:w-8 md:h-8 text-cyan-500/20 mb-4 group-hover:text-cyan-500/50 transition-colors" />
+              <p className="text-gray-300 text-base md:text-lg leading-relaxed mb-6 font-medium line-clamp-3">"{item.text}"</p>
 
               <div className="flex items-center gap-4 border-t border-white/5 pt-6">
                 <img
                   src={item.avatar}
                   alt={item.name}
-                  className="w-12 h-12 rounded-full border border-white/10 group-hover:border-cyan-400/50 transition-colors"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/10 group-hover:border-cyan-400/50 transition-colors"
                 />
                 <div>
-                  <h4 className="text-white font-bold">{item.name}</h4>
-                  <p className="text-sm text-cyan-400 font-mono tracking-wide">{item.role}</p>
+                  <h4 className="text-white font-bold text-sm md:text-base">{item.name}</h4>
+                  <p className="text-xs md:text-sm text-cyan-400 font-mono tracking-wide">{item.role}</p>
                 </div>
               </div>
             </div>

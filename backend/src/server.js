@@ -133,9 +133,7 @@ async function createServer() {
     store: MongoStore.create({
       mongoUrl: config.mongo.uri,
       touchAfter: 24 * 3600, // Lazy session update
-      crypto: {
-        secret: config.session.secret
-      }
+      autoRemove: 'native' // Enable native TTL
     }),
     name: 'sessionId', // Don't use default 'connect.sid'
     proxy: config.isProduction()

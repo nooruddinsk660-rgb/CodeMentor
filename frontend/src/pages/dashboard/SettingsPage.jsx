@@ -147,26 +147,26 @@ export default function SettingsPage() {
 
             <Sidebar />
 
-            <main className="flex-1 p-6 sm:p-8 lg:p-10 overflow-y-auto relative z-10 text-gray-900 dark:text-gray-100">
-                <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto relative z-10 text-gray-900 dark:text-gray-100">
+                <div className="max-w-6xl mx-auto flex flex-col lg:grid lg:grid-cols-4 gap-6 lg:gap-8">
 
                     {/* Sidebar Navigation */}
-                    <div className="lg:col-span-1 space-y-2">
-                        <div className="mb-8 px-4">
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                    <div className="lg:col-span-1 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-hide lg:space-y-2">
+                        <div className="mb-4 lg:mb-8 px-2 lg:px-4 shrink-0 lg:shrink">
+                            <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
                                 SETTINGS
                             </h1>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">System Configuration</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs lg:text-sm mt-1">System Configuration</p>
                         </div>
 
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group
+                                className={`shrink-0 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group whitespace-nowrap
                                     ${activeTab === tab.id
                                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                        : 'bg-white/50 dark:bg-black/20 lg:bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/5 lg:border-transparent'
                                     }`}
                             >
                                 <span className={`material-symbols-outlined transition-transform duration-300 ${activeTab === tab.id ? 'scale-110' : 'group-hover:scale-110'}`}>
@@ -176,7 +176,7 @@ export default function SettingsPage() {
                                 {activeTab === tab.id && (
                                     <motion.div
                                         layoutId="activeTab"
-                                        className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_10px_white]"
+                                        className="hidden lg:block ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_10px_white]"
                                     />
                                 )}
                             </button>

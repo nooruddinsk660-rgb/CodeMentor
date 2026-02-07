@@ -156,27 +156,27 @@ export default function CareerGalaxy() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-hidden flex z-10">
+                <div className="flex-1 overflow-hidden flex flex-col lg:flex-row z-10">
                     {/* Sidebar: Role Selector */}
-                    <div className="w-72 border-r border-gray-200 dark:border-white/10 overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-black/20 p-4 flex flex-col gap-2 transition-colors">
-                        <h3 className="text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest mb-2 px-2">Select Trajectory</h3>
+                    <div className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-white/10 overflow-x-auto lg:overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-black/20 p-4 flex flex-row lg:flex-col gap-2 transition-colors shrink-0">
+                        <h3 className="hidden lg:block text-xs font-bold text-gray-500 dark:text-slate-500 uppercase tracking-widest mb-2 px-2">Select Trajectory</h3>
                         {CAREER_PATHS.map((role) => (
                             <button
                                 key={role.id}
                                 onClick={() => setSelectedCareer(role)}
-                                className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all ${selectedCareer.id === role.id
+                                className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all min-w-[200px] lg:min-w-0 ${selectedCareer.id === role.id
                                     ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-500/50 shadow-md dark:shadow-[0_0_15px_rgba(168,85,247,0.2)]'
                                     : 'bg-white dark:bg-white/5 text-gray-600 dark:text-slate-400 border border-transparent hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'
                                     }`}
                             >
-                                <span className="material-symbols-outlined text-lg">{role.icon}</span>
-                                <span className="text-sm font-medium">{role.title}</span>
+                                <span className="material-symbols-outlined text-lg shrink-0">{role.icon}</span>
+                                <span className="text-sm font-medium truncate">{role.title}</span>
                             </button>
                         ))}
                     </div>
 
                     {/* Dashboard Area - Graph View */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-8 relative flex justify-center">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8 relative flex justify-center">
                         {loading || !roadmap ? (
                             <div className="flex flex-col items-center justify-center h-full gap-4 text-purple-400 opacity-80">
                                 <span className="material-symbols-outlined text-4xl animate-spin">cyclone</span>

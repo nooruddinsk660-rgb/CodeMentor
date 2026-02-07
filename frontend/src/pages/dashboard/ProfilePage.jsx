@@ -114,8 +114,8 @@ export default function ProfilePage() {
                 </AnimatePresence>
 
                 {/* --- 1. Header Section with IdentityMatrix --- */}
-                <div className="relative pt-8 pb-12 px-6 md:px-10">
-                    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="relative pt-4 pb-8 px-4 md:px-8">
+                    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
 
                         {/* Left: Identity Card */}
                         <div className="lg:col-span-5 xl:col-span-4 h-full min-h-[400px]">

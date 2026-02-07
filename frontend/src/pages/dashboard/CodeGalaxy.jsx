@@ -150,22 +150,22 @@ export default function CodeGalaxy() {
             <main className="flex-1 relative z-10 h-full">
 
                 {/* --- HEADER HUD --- */}
-                <div className="absolute top-8 left-8 z-30 pointer-events-none">
+                <div className="absolute top-4 left-4 lg:top-8 lg:left-8 z-30 pointer-events-none">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="flex items-start gap-4"
                     >
-                        <div className="p-3 rounded-2xl bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg dark:shadow-[0_0_30px_rgba(6,182,212,0.15)]">
-                            <span className="material-symbols-outlined text-3xl text-cyan-600 dark:text-cyan-400">hub</span>
+                        <div className="p-2 lg:p-3 rounded-2xl bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg dark:shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+                            <span className="material-symbols-outlined text-2xl lg:text-3xl text-cyan-600 dark:text-cyan-400">hub</span>
                         </div>
                         <div>
-                            <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-cyan-600 to-cyan-400 dark:from-white dark:via-cyan-100 dark:to-cyan-400 drop-shadow-sm dark:drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                            <h1 className="text-2xl lg:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-cyan-600 to-cyan-400 dark:from-white dark:via-cyan-100 dark:to-cyan-400 drop-shadow-sm dark:drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
                                 Neural Galaxy
                             </h1>
                             <div className="flex items-center gap-2 mt-1 px-1">
                                 <span className={`w-1.5 h-1.5 rounded-full ${loading ? 'bg-amber-400 animate-bounce' : 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse'}`} />
-                                <p className="text-[10px] font-bold text-cyan-500/80 uppercase tracking-[0.25em]">
+                                <p className="text-[8px] lg:text-[10px] font-bold text-cyan-500/80 uppercase tracking-[0.25em]">
                                     {loading ? 'CALIBRATING SYSTEM...' : `VISUALIZATION LINKED • ${repos.length} REPOS`}
                                 </p>
                             </div>
@@ -174,10 +174,10 @@ export default function CodeGalaxy() {
                 </div>
 
                 {/* --- CONTROLS Top Right --- */}
-                <div className="absolute top-8 right-8 z-30 flex flex-col gap-4 items-end pointer-events-auto">
+                <div className="absolute top-24 right-4 lg:top-8 lg:right-8 z-30 flex flex-col gap-4 items-end pointer-events-auto">
 
                     {/* Repo Select */}
-                    <div className="relative group min-w-[240px]">
+                    <div className="relative group min-w-[200px] lg:min-w-[240px]">
                         <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-75 transition duration-500" />
                         <div className="relative bg-white/80 dark:bg-[#0B0F19]/80 backdrop-blur-md rounded-xl border border-gray-200 dark:border-white/10 p-1 flex items-center">
                             <div className="pl-3 pr-2 text-cyan-600 dark:text-cyan-500">
@@ -221,9 +221,9 @@ export default function CodeGalaxy() {
                 </div>
 
                 {/* --- FOOTER STATS --- */}
-                <div className="absolute bottom-8 left-8 z-30 flex flex-col gap-2 pointer-events-none">
-                    <p className="text-[10px] text-gray-400 dark:text-white/30 font-mono pl-1 mb-1">REALTIME METRICS</p>
-                    <div className="flex gap-4">
+                <div className="absolute bottom-20 left-4 lg:bottom-8 lg:left-8 z-30 flex flex-col gap-2 pointer-events-none w-[90%] lg:w-auto">
+                    <p className="text-[10px] text-gray-400 dark:text-white/30 font-mono pl-1 mb-1 hidden lg:block">REALTIME METRICS</p>
+                    <div className="flex gap-2 lg:gap-4 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
                         <HudMetric
                             label="NODES"
                             value={graphData.nodes.length}

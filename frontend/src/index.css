@@ -15,7 +15,6 @@
      ========================================================= */
   .cube-viewport {
     perspective: 800px;
-    /* Stronger 3D, less 'flat' */
     transform-style: preserve-3d;
   }
 
@@ -26,7 +25,6 @@
     position: relative;
     transform-style: preserve-3d;
     animation: cube-float-spin 25s linear infinite;
-    /* majestic */
   }
 
   /* The "Masterpiece" Face */
@@ -37,38 +35,21 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
-
-    /* Ultra-premium Dark Glass */
     background: rgba(10, 10, 12, 0.95);
-    /* Even more opaque to define shape */
-
-    /* Sophisticated Border */
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-top: 1px solid rgba(255, 255, 255, 0.3);
-    /* Catch light */
     border-left: 1px solid rgba(255, 255, 255, 0.2);
-
     border-radius: 4px;
-    /* Sharper corners = more 'cube' like */
-
     backface-visibility: visible;
-
-    /* Cinematic Shadowing */
     box-shadow:
       0 0 80px rgba(0, 0, 0, 0.9) inset,
       0 0 0 1px rgba(0, 0, 0, 0.5),
-      /* crisp outline */
       0 0 20px rgba(0, 255, 255, 0.05);
-    /* very subtle glow */
-
-    /* Removed heavy blur to sharpen 3D edges */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-
     transform-style: preserve-3d;
   }
 
-  /* Reflective Gloss */
   .cube-face::before {
     content: '';
     position: absolute;
@@ -81,63 +62,32 @@
     pointer-events: none;
   }
 
-  /* Typography */
   .face-pre {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.85rem;
     line-height: 1.7;
     color: #cbd5e1;
-    /* Soft white */
     font-weight: 500;
     text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
     pointer-events: none;
     user-select: none;
     transform: translateZ(1px);
-    /* Slight pop from glass */
   }
 
-  /* Face specific transforms */
-  .face-front {
-    transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2));
-  }
-
-  .face-back {
-    transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
-  }
-
-  .face-right {
-    transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
-  }
-
-  .face-left {
-    transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
-  }
-
-  .face-top {
-    transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
-  }
-
-  .face-bottom {
-    transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
-  }
+  .face-front { transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2)); }
+  .face-back { transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2)); }
+  .face-right { transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2)); }
+  .face-left { transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2)); }
+  .face-top { transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2)); }
+  .face-bottom { transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2)); }
 
   @keyframes cube-float-spin {
-    0% {
-      transform: rotateX(35deg) rotateY(0deg) translateY(0px);
-    }
-
-    50% {
-      transform: rotateX(25deg) rotateY(180deg) translateY(-20px);
-    }
-
-    100% {
-      transform: rotateX(35deg) rotateY(360deg) translateY(0px);
-    }
+    0% { transform: rotateX(35deg) rotateY(0deg) translateY(0px); }
+    50% { transform: rotateX(25deg) rotateY(180deg) translateY(-20px); }
+    100% { transform: rotateX(35deg) rotateY(360deg) translateY(0px); }
   }
 
   @layer utilities {
-
-    /* The Electric Blue Radial Glow */
     .bg-electric-mesh {
       background-color: #020617;
       background-image:
@@ -146,20 +96,37 @@
         radial-gradient(at 100% 0%, rgba(0, 210, 255, 0.15) 0, transparent 50%);
     }
 
-    /* Text gradient for the AI theme */
     .text-gradient-blue {
       @apply bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-blue-400/50;
     }
 
-    /* Button Glow Effect */
     .btn-glow-blue {
       box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
     }
   }
 
   /* =========================================================
-     UTILITIES
+     CUSTOM SCROLLBAR (PREMIUM)
      ========================================================= */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

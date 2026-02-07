@@ -43,9 +43,8 @@ export default function DashboardPage() {
       .then(([userData, masterData, aiData]) => {
         setSkills(userData || []);
         setGlobalSkills(masterData || []);
-        // aiData returns { stats: ..., intelligence: ... }
         setIntelligence(aiData?.intelligence || null);
-        setStats(aiData?.stats || null); // <--- Save the stats here!
+        setStats(aiData?.stats || null);
       })
       .catch((err) => {
         console.error(err);
@@ -100,18 +99,21 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-[#030712] relative overflow-hidden selection:bg-blue-500/30 transition-colors duration-500">
+    <div className="min-h-screen flex bg-[#030712] relative overflow-hidden transition-colors duration-500 selection:bg-cyan-500/30 selection:text-cyan-200">
 
       {/* AMBIENT BACKGROUND EFFECTS */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-200/40 dark:bg-purple-900/10 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-normal" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-200/40 dark:bg-blue-900/10 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-normal" />
+        {/* Noise Texture */}
+        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }} />
+
+        <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-purple-900/10 blur-[150px] rounded-full mix-blend-screen" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[800px] h-[800px] bg-blue-900/10 blur-[150px] rounded-full mix-blend-screen" />
       </div>
 
       <Sidebar />
-      <Toaster position="bottom-right" toastOptions={{ style: { background: '#1F2937', color: '#fff' } }} />
+      <Toaster position="bottom-right" toastOptions={{ style: { background: '#0B0F19', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } }} />
 
-      <main className="flex-1 p-6 sm:p-8 lg:p-10 overflow-y-auto relative z-10">
+      <main className="flex-1 px-4 sm:px-8 py-8 lg:p-10 overflow-y-auto relative z-10 custom-scrollbar">
         <div className="max-w-7xl mx-auto">
           <Header onSearch={handleClientSearch} />
 
@@ -125,7 +127,7 @@ export default function DashboardPage() {
             <DirectiveHero streak={currentStreak || 0} />
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mt-8">
             <div className="lg:col-span-2 space-y-8">
 
               {/* --- NEW: INTELLIGENCE LAYER --- */}
@@ -137,8 +139,8 @@ export default function DashboardPage() {
                   className="space-y-6"
                 >
                   <div className="flex items-center justify-between">
-                    <h2 className="text-gray-900 dark:text-white text-[22px] font-bold flex items-center gap-2">
-                      <span className="material-symbols-outlined text-cyan-500 dark:text-cyan-400">monitoring</span>
+                    <h2 className="text-white text-xl font-bold flex items-center gap-2 tracking-tight">
+                      <span className="material-symbols-outlined text-cyan-400">monitoring</span>
                       Skill Intelligence
                     </h2>
                   </div>
@@ -158,8 +160,8 @@ export default function DashboardPage() {
 
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-gray-900 dark:text-white text-[22px] font-bold flex items-center gap-2">
-                    <span className="material-symbols-outlined text-purple-500 dark:text-purple-400">psychology</span>
+                  <h2 className="text-white text-xl font-bold flex items-center gap-2 tracking-tight">
+                    <span className="material-symbols-outlined text-purple-400">psychology</span>
                     Skill Matrix
                   </h2>
                 </div>
@@ -184,17 +186,17 @@ export default function DashboardPage() {
             </div>
 
             <aside className="lg:col-span-1">
-              <div className="sticky top-8">
+              <div className="sticky top-8 space-y-6">
                 <NeuralMatchDeck />
 
-                <div className="flex justify-center gap-4 mt-4 text-[10px] text-gray-500 font-mono opacity-50">
-                  <span className="border border-gray-700 px-2 py-1 rounded">← NOPE</span>
-                  <span className="border border-gray-700 px-2 py-1 rounded">CONNECT →</span>
+                <div className="flex justify-center gap-4 text-[10px] text-gray-500 font-mono opacity-50">
+                  <span className="border border-white/10 px-2 py-1 rounded">← REJECT</span>
+                  <span className="border border-white/10 px-2 py-1 rounded">ACCEPT →</span>
                 </div>
               </div>
             </aside>
           </div>
-          <div className="mt-3">
+          <div className="mt-12 opacity-50 hover:opacity-100 transition-opacity">
             <Footer />
           </div>
         </div>

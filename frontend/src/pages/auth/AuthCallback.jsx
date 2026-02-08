@@ -40,7 +40,7 @@ export default function AuthCallback() {
     } else {
       navigate("/login");
     }
-  }, [searchParams, navigate, login]);
+  }, [searchParams, navigate, setAuth]);
 
   return (
     <div className="min-h-screen bg-[#030712] flex items-center justify-center">

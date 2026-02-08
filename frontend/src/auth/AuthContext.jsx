@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { loginUser, registerUser, logoutUser } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -73,25 +74,49 @@ export const AuthProvider = ({ children }) => {
     window.authFetch = interceptor;
   }, [token]);
 
-  const login = useCallback((userData, authToken) => {
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("token", authToken);
-    setError(null);
+  const login = useCallback(async (email, password) => {
+    try {
+      setError(null);
+      // Pass object because service expects credential object
+      const response = await loginUser({ email, password });
+
+      const { user, token } = response;
+
+      setUser(user);
+      setToken(token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token", token);
+
+      return user;
+    } catch (err) {
+      setError(err.message || "Login failed");
+      throw err;
+    }
+  }, []);
+
+  const register = useCallback(async (name, email, password) => {
+    try {
+      setError(null);
+      // Pass object matching backend expectation
+      const response = await registerUser({ username: name, email, password });
+      const { user, token } = response;
+
+      setUser(user);
+      setToken(token);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token", token);
+
+      return user;
+    } catch (err) {
+      setError(err.message || "Registration failed");
+      throw err;
+    }
   }, []);
 
   const logout = useCallback(async () => {
     try {
       if (token) {
-        // Build robust logout - don't crash if network fails
-        await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }).catch(err => console.error("Logout network error", err));
+        await logoutUser(token);
       }
     } catch (error) {
       console.error("Logout error:", error);
@@ -113,6 +138,13 @@ export const AuthProvider = ({ children }) => {
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
   }, []);
 
+  const setAuth = useCallback((user, token) => {
+    setUser(user);
+    setToken(token);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("token", token);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -122,9 +154,11 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         login,
+        register,
         logout,
         updateUser,
-        loginWithGithub
+        loginWithGithub,
+        setAuth
       }}
     >
       {children}

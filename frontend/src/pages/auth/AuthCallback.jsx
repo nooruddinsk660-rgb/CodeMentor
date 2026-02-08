@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { setAuth } = useAuth();
   const processedRef = useRef(false); // Prevent double execution in React StrictMode
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export default function AuthCallback() {
         .then((data) => {
           if (data.success) {
             // 2. Login via Context
-            login({ user: data.data, token });
+            setAuth(data.data, token);
             navigate("/dashboard");
           } else {
             console.error("Failed to fetch user data");

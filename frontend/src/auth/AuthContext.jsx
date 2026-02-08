@@ -135,7 +135,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginWithGithub = useCallback(() => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
+    const apiUrl = import.meta.env.VITE_API_URL;
+    console.log("Initiating GitHub Login...", apiUrl);
+    if (!apiUrl) {
+      console.error("VITE_API_URL is missing!");
+      setError("Configuration Error: API URL missing");
+      return;
+    }
+    window.location.href = `${apiUrl}/auth/github`;
   }, []);
 
   const setAuth = useCallback((user, token) => {

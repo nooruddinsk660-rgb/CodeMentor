@@ -30,6 +30,9 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 
 # ===== LOGGING CONFIGURATION =====
+# Create logs directory if it doesn't exist
+os.makedirs('logs', exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',

@@ -3,10 +3,11 @@ fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
 
 # ML/AI packages - flexible versions for Render
-torch>=2.0.0
-torchvision>=0.15.0
-transformers>=4.30.0
-sentence-transformers>=2.2.0
+# ML/AI packages - flexible versions for Render
+# torch, torchvision, transformers, sentence-transformers REMOVED to save RAM
+# We now use Google Gemini API for embeddings
+
+# Data processing
 
 # Data processing
 numpy>=1.24.0

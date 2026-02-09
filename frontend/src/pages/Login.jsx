@@ -28,14 +28,24 @@ const Login = () => {
     }
   };
 
+  const [isDesktop, setIsDesktop] = useState(window.matchMedia("(min-width: 1024px)").matches);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const listener = () => setIsDesktop(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#030712] flex overflow-hidden">
+    <div className="min-h-screen bg-[#030712] flex flex-col lg:flex-row overflow-x-hidden overflow-y-auto">
 
       {/* LEFT: Branding / 3D (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center bg-gradient-to-br from-gray-900 to-black overflow-hidden border-r border-white/5">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent opacity-50" />
         <div className="relative z-10 transform scale-75">
-          <CodeCube size={400} />
+          {/* Only render 3D element on desktop to save mobile battery/performance */}
+          {isDesktop && <CodeCube size={400} />}
         </div>
         <div className="absolute bottom-10 left-10 text-white/40 font-mono text-xs tracking-widest uppercase">
           Secure Access Terminal v9.0

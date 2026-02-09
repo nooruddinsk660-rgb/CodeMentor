@@ -146,8 +146,9 @@ export default function Features() {
           {/* Item 3: GitHub Integration (Full Width) */}
           <BentoCard className="md:col-span-12 lg:col-span-12 group/card bg-gradient-to-r from-[#0a0e17] to-[#0f1623]" delay={0.2}>
 
-            <div className="flex flex-col lg:flex-row items-center gap-8 md:gap-12 h-full w-full">
-              <div className="flex-1 w-full order-2 lg:order-1">
+            <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-12 h-full w-full">
+              {/* Left Column: Terminal (Order 2 on Mobile, 1 on Desktop) */}
+              <div className="flex-1 w-full max-w-full order-2 lg:order-1 overflow-hidden">
                 <div className="w-full rounded-xl border border-white/10 bg-[#09090b] font-mono text-[10px] md:text-xs shadow-2xl overflow-hidden group-hover/card:border-purple-500/30 transition-colors duration-500 relative">
                   <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent" />
 
@@ -160,23 +161,23 @@ export default function Features() {
                     <div className="text-gray-600 text-[10px] font-medium">terminal — zsh</div>
                   </div>
 
-                  <div className="p-4 md:p-6 space-y-4 font-mono">
-                    <div className="flex items-center gap-3 text-sm">
+                  <div className="p-4 md:p-6 space-y-4 font-mono overflow-x-auto custom-scrollbar">
+                    <div className="flex items-center gap-2 md:gap-3 text-sm whitespace-nowrap">
                       <span className="text-purple-400">➜</span>
                       <span className="text-cyan-400">~/orbit</span>
                       <span className="text-white typing-effect border-r-2 border-white pr-1 animate-pulse">git push origin feature/vessel</span>
                     </div>
 
-                    <div className="pl-4 space-y-1 opacity-70 text-xs text-gray-400 leading-relaxed">
+                    <div className="pl-4 space-y-1 opacity-70 text-xs text-gray-400 leading-relaxed whitespace-nowrap">
                       <div>Enumerating objects: 12, done.</div>
                       <div>Writing objects: 100% (12/12), 1.24 KiB | 1.24 MiB/s, done.</div>
                       <div className="text-green-400/80">Total 12 (delta 4), reused 0 (delta 0)</div>
                     </div>
 
                     <div className="pl-4 pt-2">
-                      <div className="inline-flex items-center gap-2 text-green-400 font-bold bg-green-500/10 px-3 py-2 rounded-lg border border-green-500/20 animate-pulse">
+                      <div className="inline-flex items-center gap-2 text-green-400 font-bold bg-green-500/10 px-3 py-2 rounded-lg border border-green-500/20 animate-pulse whitespace-nowrap">
                         <Zap className="w-3.5 h-3.5 fill-current" />
-                        <span className="tracking-wide text-[11px] uppercase">OrbitDev Watcher: Sync Complete</span>
+                        <span className="tracking-wide text-[10px] md:text-[11px] uppercase">OrbitDev Watcher: Sync Complete</span>
                       </div>
                     </div>
 
@@ -188,6 +189,7 @@ export default function Features() {
                 </div>
               </div>
 
+              {/* Right Column: Text Content (Order 1 on Mobile, 2 on Desktop) */}
               <div className="flex-1 w-full order-1 lg:order-2">
                 <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-6 text-purple-400 group-hover/card:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
                   <GitPullRequest className="w-6 h-6 md:w-8 md:h-8" />
@@ -195,7 +197,7 @@ export default function Features() {
                 <h3 className="text-2xl md:text-4xl font-bold text-white mb-4 group-hover/card:text-purple-400 transition-colors tracking-tight">
                   Zero-Friction Sync
                 </h3>
-                <p className="text-gray-400 text-base md:text-lg leading-relaxed mb-6">
+                <p className="text-gray-400 text-sm md:text-lg leading-relaxed mb-6">
                   Connect your repositories once. We automatically digest every PR, tracking your <span className="text-white italic">"Code Velocity"</span>
                   and updating your skill profile without a single second of data entry.
                 </p>

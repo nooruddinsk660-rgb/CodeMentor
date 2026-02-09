@@ -55,13 +55,33 @@ const OrbitalSystem = () => {
 };
 
 export default function OrbitalBackground() {
+    const isMobile = window.innerWidth < 768; // Simple check for initial render
+
     return (
         <div className="absolute inset-0 z-0 w-full h-full pointer-events-none opacity-60">
-            <Canvas camera={{ position: [0, 0, 25], fov: 45 }} gl={{ alpha: true, antialias: true }}>
+            <Canvas
+                camera={{ position: [0, 0, 25], fov: 45 }}
+                gl={{
+                    alpha: true,
+                    antialias: !isMobile, // Disable AA on mobile for perf
+                    powerPreference: "high-performance",
+                    preserveDrawingBuffer: false
+                }}
+                dpr={isMobile ? [1, 1] : [1, 2]} // Cap DPR on mobile
+            >
                 <ambientLight intensity={0.5} />
                 <pointLight position={[10, 10, 10]} intensity={1} color="#06b6d4" />
 
-                <Stars radius={100} depth={50} count={3000} factor={4} saturation={0} fade speed={0.5} />
+                {/* Significantly reduce star count on mobile */}
+                <Stars
+                    radius={100}
+                    depth={50}
+                    count={isMobile ? 500 : 3000}
+                    factor={4}
+                    saturation={0}
+                    fade
+                    speed={0.5}
+                />
 
                 <Float speed={1} rotationIntensity={0.2} floatIntensity={0.2}>
                     <OrbitalSystem />

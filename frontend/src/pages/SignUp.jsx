@@ -30,15 +30,24 @@ const SignUp = () => {
     }
   };
 
+  const [isDesktop, setIsDesktop] = useState(window.matchMedia("(min-width: 1024px)").matches);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const listener = () => setIsDesktop(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#030712] flex overflow-hidden">
+    <div className="min-h-screen bg-[#030712] flex flex-col lg:flex-row overflow-x-hidden overflow-y-auto">
 
       {/* LEFT: Branding */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center bg-black border-r border-white/5 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent opacity-50" />
         {/* Rotate cube for different perspective on Signup */}
         <div className="relative z-10 transform scale-75 rotate-180">
-          <CodeCube size={400} />
+          {isDesktop && <CodeCube size={400} />}
         </div>
         <div className="absolute top-10 left-10 text-white/40 font-mono text-xs tracking-widest uppercase">
           Join the Collective

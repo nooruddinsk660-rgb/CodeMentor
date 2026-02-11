@@ -34,12 +34,12 @@ class EmbeddingGenerator:
     
     def __init__(self, model_name: str = 'models/text-embedding-004'):
         self.model_name = model_name
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self.api_key = os.getenv("GEMINI_API_KEY")
         # Initialize Rate Limiter with strict safety margin
         self.rate_limiter = RateLimiter(requests_per_minute=10)
         
         if not self.api_key:
-            logger.error("CRITICAL: GOOGLE_API_KEY not found! AI features will be disabled.")
+            logger.error("CRITICAL: GEMINI_API_KEY not found! AI features will be disabled.")
         else:
             genai.configure(api_key=self.api_key)
 

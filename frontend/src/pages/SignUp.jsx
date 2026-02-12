@@ -56,12 +56,12 @@ const SignUp = () => {
 
       {/* RIGHT: Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 lg:hidden" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 lg:hidden pointer-events-none" />
 
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md relative z-10"
         >
           <div className="mb-10 text-center lg:text-left">
             <h2 className="text-4xl font-black text-white mb-2 tracking-tight">Initialize Profile</h2>
